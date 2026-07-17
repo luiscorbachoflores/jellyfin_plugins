@@ -47,18 +47,27 @@ public class ReviewsRepository
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            results.Add(new ReviewRecord(
-                reader.GetInt32(0),
-                reader.GetString(1),
-                reader.IsDBNull(2) ? null : reader.GetString(2),
-                reader.GetString(3),
-                reader.GetInt64(4) == 1,
-                reader.GetDouble(5),
-                reader.GetString(6),
-                reader.GetString(7)));
+            results.Add(ReadRecord(reader));
         }
 
         return results;
+    }
+
+    public ReviewRecord? GetById(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT Id, ItemId, UserId, DisplayName, IsAnonymous, Rating, Comment, CreatedAt FROM Reviews WHERE Id = $id";
+        cmd.Parameters.AddWithValue("$id", id);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        return ReadRecord(reader);
     }
 
     public ReviewRecord Add(string itemId, string? userId, string displayName, bool isAnonymous, double rating, string comment)
@@ -81,5 +90,43 @@ public class ReviewsRepository
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());
         return new ReviewRecord(id, itemId, userId, displayName, isAnonymous, rating, comment, createdAt);
+    }
+
+    public ReviewRecord? Update(int id, double rating, string comment, bool isAnonymous)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "UPDATE Reviews SET Rating = $rating, Comment = $comment, IsAnonymous = $isAnonymous WHERE Id = $id";
+        cmd.Parameters.AddWithValue("$rating", rating);
+        cmd.Parameters.AddWithValue("$comment", comment);
+        cmd.Parameters.AddWithValue("$isAnonymous", isAnonymous ? 1 : 0);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+
+        return GetById(id);
+    }
+
+    public void Delete(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "DELETE FROM Reviews WHERE Id = $id";
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    private static ReviewRecord ReadRecord(SqliteDataReader reader)
+    {
+        return new ReviewRecord(
+            reader.GetInt32(0),
+            reader.GetString(1),
+            reader.IsDBNull(2) ? null : reader.GetString(2),
+            reader.GetString(3),
+            reader.GetInt64(4) == 1,
+            reader.GetDouble(5),
+            reader.GetString(6),
+            reader.GetString(7));
     }
 }

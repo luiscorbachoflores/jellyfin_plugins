@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -62,10 +61,12 @@ public class ReviewsController : ControllerBase
     public async Task<ActionResult<ReviewsResponseDto>> Get([FromRoute] string itemId)
     {
         var isAdmin = false;
+        string? currentUserId = null;
         var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
         if (authInfo.IsAuthenticated && authInfo.User is not null)
         {
             isAdmin = authInfo.User.HasPermission(PermissionKind.IsAdministrator);
+            currentUserId = authInfo.UserId.ToString();
         }
 
         var reviews = _repository.GetForItem(itemId);
@@ -76,23 +77,27 @@ public class ReviewsController : ControllerBase
                 r.IsAnonymous,
                 r.Rating,
                 r.Comment,
-                r.CreatedAt))
+                r.CreatedAt,
+                currentUserId is not null && r.UserId == currentUserId))
             .ToList();
-        var average = dtoList.Count > 0 ? Math.Round(dtoList.Average(d => d.Rating), 2) : 0;
-        return Ok(new ReviewsResponseDto(average, dtoList.Count, dtoList));
+        var rated = dtoList.Where(d => d.Rating > 0).ToList();
+        var average = rated.Count > 0 ? Math.Round(rated.Average(d => d.Rating), 2) : 0;
+        return Ok(new ReviewsResponseDto(average, dtoList.Count, rated.Count, dtoList));
     }
 
     [HttpPost("{itemId}")]
     public async Task<ActionResult<ReviewDto>> Post([FromRoute] string itemId, [FromBody] CreateReviewDto dto)
     {
-        if (dto.Rating < 0.5 || dto.Rating > 5 || Math.Abs(dto.Rating * 2 - Math.Round(dto.Rating * 2)) > 0.0001)
+        if (!IsValidRating(dto.Rating))
         {
-            return BadRequest("Rating must be between 0.5 and 5 in 0.5 increments.");
+            return BadRequest("Rating must be between 0.5 and 5 in 0.5 increments, or omitted.");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Comment))
+        var comment = (dto.Comment ?? string.Empty).Trim();
+        var rating = dto.Rating ?? 0;
+        if (rating < 0.5 && comment.Length == 0)
         {
-            return BadRequest("Comment is required.");
+            return BadRequest("Debes indicar una puntuación, un comentario, o ambos.");
         }
 
         var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
@@ -104,7 +109,7 @@ public class ReviewsController : ControllerBase
         var displayName = authInfo.User.Username;
         var userId = authInfo.UserId.ToString();
 
-        var record = _repository.Add(itemId, userId, displayName, dto.AsAnonymous, dto.Rating, dto.Comment.Trim());
+        var record = _repository.Add(itemId, userId, displayName, dto.AsAnonymous, rating, comment);
 
         var itemName = itemId;
         if (Guid.TryParse(itemId, out var itemGuid))
@@ -114,7 +119,87 @@ public class ReviewsController : ControllerBase
 
         await TrySendTelegramAsync(displayName, dto.AsAnonymous, itemName, record.Rating, record.Comment).ConfigureAwait(false);
 
-        return Ok(new ReviewDto(record.Id, dto.AsAnonymous ? "Anónimo" : displayName, dto.AsAnonymous, record.Rating, record.Comment, record.CreatedAt));
+        return Ok(new ReviewDto(record.Id, dto.AsAnonymous ? "Anónimo" : displayName, dto.AsAnonymous, record.Rating, record.Comment, record.CreatedAt, true));
+    }
+
+    [HttpPut("{itemId}/{reviewId:int}")]
+    public async Task<ActionResult<ReviewDto>> Put([FromRoute] string itemId, [FromRoute] int reviewId, [FromBody] CreateReviewDto dto)
+    {
+        if (!IsValidRating(dto.Rating))
+        {
+            return BadRequest("Rating must be between 0.5 and 5 in 0.5 increments, or omitted.");
+        }
+
+        var comment = (dto.Comment ?? string.Empty).Trim();
+        var rating = dto.Rating ?? 0;
+        if (rating < 0.5 && comment.Length == 0)
+        {
+            return BadRequest("Debes indicar una puntuación, un comentario, o ambos.");
+        }
+
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        {
+            return Unauthorized();
+        }
+
+        var existing = _repository.GetById(reviewId);
+        if (existing is null || existing.ItemId != itemId)
+        {
+            return NotFound();
+        }
+
+        var userId = authInfo.UserId.ToString();
+        var isAdmin = authInfo.User.HasPermission(PermissionKind.IsAdministrator);
+        if (existing.UserId != userId && !isAdmin)
+        {
+            return Forbid();
+        }
+
+        var updated = _repository.Update(reviewId, rating, comment, dto.AsAnonymous);
+        if (updated is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new ReviewDto(updated.Id, updated.IsAnonymous ? "Anónimo" : updated.DisplayName, updated.IsAnonymous, updated.Rating, updated.Comment, updated.CreatedAt, true));
+    }
+
+    [HttpDelete("{itemId}/{reviewId:int}")]
+    public async Task<IActionResult> Delete([FromRoute] string itemId, [FromRoute] int reviewId)
+    {
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        {
+            return Unauthorized();
+        }
+
+        var existing = _repository.GetById(reviewId);
+        if (existing is null || existing.ItemId != itemId)
+        {
+            return NotFound();
+        }
+
+        var userId = authInfo.UserId.ToString();
+        var isAdmin = authInfo.User.HasPermission(PermissionKind.IsAdministrator);
+        if (existing.UserId != userId && !isAdmin)
+        {
+            return Forbid();
+        }
+
+        _repository.Delete(reviewId);
+        return NoContent();
+    }
+
+    private static bool IsValidRating(double? rating)
+    {
+        if (!rating.HasValue)
+        {
+            return true;
+        }
+
+        var value = rating.Value;
+        return value >= 0.5 && value <= 5 && Math.Abs(value * 2 - Math.Round(value * 2)) <= 0.0001;
     }
 
     private async Task TrySendTelegramAsync(string realUsername, bool wasAnonymous, string itemName, double rating, string comment)
@@ -129,7 +214,8 @@ public class ReviewsController : ControllerBase
         {
             var client = _httpClientFactory.CreateClient();
             var anonNote = wasAnonymous ? " (publicada como anónimo)" : string.Empty;
-            var message = $"⭐ Nueva reseña de {realUsername}{anonNote} en \"{itemName}\": {rating}/5\n{comment}";
+            var ratingNote = rating > 0 ? $"{rating}/5" : "sin puntuación";
+            var message = $"⭐ Nueva reseña de {realUsername}{anonNote} en \"{itemName}\": {ratingNote}\n{comment}";
             var url = $"https://api.telegram.org/bot{config.TelegramBotToken}/sendMessage";
             var content = new FormUrlEncodedContent(new[]
             {
@@ -151,16 +237,14 @@ public class ReviewsController : ControllerBase
     }
 }
 
-public record ReviewDto(int Id, string DisplayName, bool IsAnonymous, double Rating, string Comment, string CreatedAt);
+public record ReviewDto(int Id, string DisplayName, bool IsAnonymous, double Rating, string Comment, string CreatedAt, bool CanManage);
 
-public record ReviewsResponseDto(double Average, int Count, System.Collections.Generic.IReadOnlyList<ReviewDto> Reviews);
+public record ReviewsResponseDto(double Average, int Count, int RatedCount, System.Collections.Generic.IReadOnlyList<ReviewDto> Reviews);
 
 public class CreateReviewDto
 {
-    [Required]
-    public double Rating { get; set; }
+    public double? Rating { get; set; }
 
-    [Required]
     public string Comment { get; set; } = string.Empty;
 
     public bool AsAnonymous { get; set; } = true;

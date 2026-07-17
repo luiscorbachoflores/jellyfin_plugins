@@ -12,18 +12,25 @@
         '.reviewsStars{display:inline-flex;cursor:pointer;font-size:1.7em;line-height:1;letter-spacing:.05em;}',
         '.reviewsStars .star{position:relative;width:1em;display:inline-block;color:#555;}',
         '.reviewsStars .starFill{position:absolute;top:0;left:0;width:0%;overflow:hidden;color:#00a4dc;pointer-events:none;white-space:nowrap;}',
+        '.reviewsStarsHint{font-size:.8em;opacity:.7;}',
         '.reviewsToggle{display:flex;align-items:center;gap:.6em;font-size:.9em;}',
         '.reviewsToggle button{padding:.3em .8em;border-radius:14px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;}',
         '.reviewsToggle button.active{background:#00a4dc;border-color:#00a4dc;color:#fff;}',
         '.reviewsForm textarea{min-height:4em;resize:vertical;font-family:inherit;font-size:.95em;padding:.6em;border-radius:4px;border:1px solid #444;background:rgba(255,255,255,.06);color:inherit;}',
         '.reviewsSubmit{align-self:flex-start;padding:.45em 1.3em;border-radius:4px;border:none;background:#00a4dc;color:#fff;cursor:pointer;font-size:.9em;}',
         '.reviewsSubmit:disabled{opacity:.5;cursor:default;}',
+        '.reviewsCancelEdit{align-self:flex-start;padding:.4em 1em;border-radius:4px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;font-size:.85em;}',
         '.reviewsStatus{font-size:.85em;opacity:.8;min-height:1.2em;}',
         '.reviewsList .reviewItem{padding:.75em 0;border-top:1px solid rgba(255,255,255,.08);}',
-        '.reviewsList .reviewHead{display:flex;justify-content:space-between;gap:1em;font-size:.9em;opacity:.9;margin-bottom:.3em;flex-wrap:wrap;}',
+        '.reviewsList .reviewHead{display:flex;align-items:center;justify-content:space-between;gap:1em;font-size:.9em;opacity:.9;margin-bottom:.3em;flex-wrap:wrap;}',
         '.reviewsList .reviewUser{font-weight:600;}',
+        '.reviewsList .reviewDate{opacity:.75;}',
         '.reviewsList .reviewStarsDisplay{font-size:1.1em;letter-spacing:.05em;}',
-        '.reviewsList .reviewComment{font-size:.95em;white-space:pre-wrap;}',
+        '.reviewsList .reviewNoRating{font-size:.85em;opacity:.7;font-style:italic;}',
+        '.reviewsList .reviewComment{font-size:.95em;white-space:pre-wrap;margin-top:.3em;}',
+        '.reviewManage{display:flex;gap:.5em;margin-left:auto;}',
+        '.reviewManage button{padding:.15em .7em;font-size:.8em;border-radius:12px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;}',
+        '.reviewManage button:hover{border-color:#00a4dc;}',
         '.reviewsEmpty{opacity:.7;font-size:.9em;}'
     ].join('');
 
@@ -82,8 +89,12 @@
         starsEl.addEventListener('click', function (evt) {
             var v = ratingFromEvent(starsEl, evt);
             if (v !== null) {
-                starsEl.setAttribute('data-selected', String(v));
-                setStarsValue(starsEl, v);
+                var current = parseFloat(starsEl.getAttribute('data-selected') || '0');
+                // Clic sobre la misma puntuación ya seleccionada la quita
+                // (permite dejar el formulario sin estrellas tras haber probado).
+                var next = current === v ? 0 : v;
+                starsEl.setAttribute('data-selected', String(next));
+                setStarsValue(starsEl, next);
             }
         });
         return starsEl;
@@ -91,6 +102,16 @@
 
     function apiClient() {
         return window.ApiClient || null;
+    }
+
+    function authHeaders(extra) {
+        var headers = extra || {};
+        var client = apiClient();
+        var token = client && typeof client.accessToken === 'function' ? client.accessToken() : null;
+        if (token) {
+            headers['X-Emby-Token'] = token;
+        }
+        return headers;
     }
 
     function fetchReviews(itemId) {
@@ -103,24 +124,39 @@
     }
 
     function submitReview(itemId, payload) {
-        var headers = { 'Content-Type': 'application/json' };
-        var client = apiClient();
-        var token = client && typeof client.accessToken === 'function' ? client.accessToken() : null;
-        if (token) {
-            headers['X-Emby-Token'] = token;
-        }
         return fetch('/Reviews/' + encodeURIComponent(itemId), {
             method: 'POST',
-            headers: headers,
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(payload)
+        }).then(handleWriteResponse);
+    }
+
+    function updateReview(itemId, reviewId, payload) {
+        return fetch('/Reviews/' + encodeURIComponent(itemId) + '/' + reviewId, {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload)
+        }).then(handleWriteResponse);
+    }
+
+    function deleteReview(itemId, reviewId) {
+        return fetch('/Reviews/' + encodeURIComponent(itemId) + '/' + reviewId, {
+            method: 'DELETE',
+            headers: authHeaders()
         }).then(function (r) {
             if (!r.ok) {
-                return r.text().then(function (t) {
-                    throw new Error(t || ('HTTP ' + r.status));
-                });
+                throw new Error('HTTP ' + r.status);
             }
-            return r.json();
         });
+    }
+
+    function handleWriteResponse(r) {
+        if (!r.ok) {
+            return r.text().then(function (t) {
+                throw new Error(t || ('HTTP ' + r.status));
+            });
+        }
+        return r.json();
     }
 
     function renderList(listEl, data) {
@@ -131,14 +167,27 @@
         listEl.innerHTML = data.Reviews.map(function (r) {
             var date = new Date(r.CreatedAt);
             var dateStr = isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+            var ratingHtml = r.Rating > 0
+                ? '<div class="reviewStarsDisplay">' + starsHtml(r.Rating, false) + '</div>'
+                : '<div class="reviewNoRating">Sin puntuación</div>';
+            var commentHtml = r.Comment
+                ? '<div class="reviewComment">' + escapeHtml(r.Comment) + '</div>'
+                : '';
+            var manageHtml = r.CanManage
+                ? '<span class="reviewManage">' +
+                  '<button type="button" class="reviewEditBtn" data-id="' + r.Id + '">Editar</button>' +
+                  '<button type="button" class="reviewDeleteBtn" data-id="' + r.Id + '">Eliminar</button>' +
+                  '</span>'
+                : '';
             return '' +
-                '<div class="reviewItem">' +
+                '<div class="reviewItem" data-review-id="' + r.Id + '">' +
                 '  <div class="reviewHead">' +
                 '    <span class="reviewUser">' + escapeHtml(r.DisplayName) + '</span>' +
                 '    <span class="reviewDate">' + dateStr + '</span>' +
+                '    ' + manageHtml +
                 '  </div>' +
-                '  <div class="reviewStarsDisplay">' + starsHtml(r.Rating, false) + '</div>' +
-                '  <div class="reviewComment">' + escapeHtml(r.Comment) + '</div>' +
+                '  ' + ratingHtml +
+                commentHtml +
                 '</div>';
         }).join('');
     }
@@ -158,13 +207,15 @@
             '<div class="reviewsAverage">Cargando reseñas...</div>' +
             '<div class="reviewsForm">' +
             '  <div class="reviewsFormStars"></div>' +
+            '  <div class="reviewsStarsHint">Estrellas y comentario son opcionales: solo hace falta uno de los dos. Vuelve a pulsar la misma puntuación para quitarla.</div>' +
             '  <div class="reviewsToggle">' +
             '    <span>Comentar como:</span>' +
             '    <button type="button" class="reviewsToggleAnon active" data-mode="anon">Anónimo</button>' +
             '    <button type="button" class="reviewsToggleUser" data-mode="user">Usuario Jellyfin</button>' +
             '  </div>' +
-            '  <textarea placeholder="Escribe tu opinión sobre este título..."></textarea>' +
+            '  <textarea placeholder="Escribe tu opinión sobre este título (opcional si ya has puntuado con estrellas)..."></textarea>' +
             '  <button type="button" class="reviewsSubmit">Publicar reseña</button>' +
+            '  <button type="button" class="reviewsCancelEdit" style="display:none;">Cancelar edición</button>' +
             '  <div class="reviewsStatus"></div>' +
             '</div>' +
             '<div class="reviewsList"><p class="reviewsEmpty">Cargando...</p></div>';
@@ -174,6 +225,8 @@
         var starsEl = makeInteractiveStars(formStarsHost);
 
         var mode = 'anon';
+        var editingId = null;
+        var currentReviews = [];
         var btnAnon = container.querySelector('.reviewsToggleAnon');
         var btnUser = container.querySelector('.reviewsToggleUser');
         btnAnon.addEventListener('click', function () {
@@ -194,14 +247,39 @@
 
         var textarea = container.querySelector('textarea');
         var submitBtn = container.querySelector('.reviewsSubmit');
+        var cancelBtn = container.querySelector('.reviewsCancelEdit');
         var listEl = container.querySelector('.reviewsList');
         var avgEl = container.querySelector('.reviewsAverage');
 
+        function resetForm() {
+            textarea.value = '';
+            starsEl.setAttribute('data-selected', '0');
+            setStarsValue(starsEl, 0);
+            editingId = null;
+            submitBtn.textContent = 'Publicar reseña';
+            cancelBtn.style.display = 'none';
+            mode = 'anon';
+            btnAnon.classList.add('active');
+            btnUser.classList.remove('active');
+        }
+
+        cancelBtn.addEventListener('click', function () {
+            resetForm();
+            setStatus(container, '');
+        });
+
         function refresh() {
             fetchReviews(itemId).then(function (data) {
-                avgEl.textContent = data.Count > 0
-                    ? ('Media: ' + data.Average.toFixed(1) + ' / 5 (' + data.Count + (data.Count === 1 ? ' reseña' : ' reseñas') + ')')
-                    : 'Sin valoraciones todavía';
+                currentReviews = data.Reviews || [];
+                if (data.RatedCount > 0) {
+                    avgEl.textContent = 'Media: ' + data.Average.toFixed(1) + ' / 5 (' +
+                        data.RatedCount + (data.RatedCount === 1 ? ' valoración' : ' valoraciones') + ') · ' +
+                        data.Count + (data.Count === 1 ? ' reseña' : ' reseñas');
+                } else if (data.Count > 0) {
+                    avgEl.textContent = data.Count + (data.Count === 1 ? ' reseña sin puntuación todavía' : ' reseñas sin puntuación todavía');
+                } else {
+                    avgEl.textContent = 'Sin reseñas todavía';
+                }
                 renderList(listEl, data);
             }).catch(function () {
                 avgEl.textContent = '';
@@ -209,15 +287,55 @@
             });
         }
 
+        listEl.addEventListener('click', function (evt) {
+            var editBtn = evt.target.closest('.reviewEditBtn');
+            var delBtn = evt.target.closest('.reviewDeleteBtn');
+            if (editBtn) {
+                startEdit(parseInt(editBtn.getAttribute('data-id'), 10));
+            } else if (delBtn) {
+                var id = parseInt(delBtn.getAttribute('data-id'), 10);
+                if (window.confirm('¿Seguro que quieres eliminar tu reseña?')) {
+                    deleteReview(itemId, id).then(function () {
+                        if (editingId === id) {
+                            resetForm();
+                        }
+                        refresh();
+                    }).catch(function () {
+                        setStatus(container, 'No se pudo eliminar la reseña.');
+                    });
+                }
+            }
+        });
+
+        function startEdit(id) {
+            var review = currentReviews.filter(function (r) { return r.Id === id; })[0];
+            if (!review || !review.CanManage) {
+                return;
+            }
+            editingId = id;
+            textarea.value = review.Comment || '';
+            var rating = review.Rating || 0;
+            starsEl.setAttribute('data-selected', String(rating));
+            setStarsValue(starsEl, rating);
+            mode = review.IsAnonymous ? 'anon' : 'user';
+            if (mode === 'anon') {
+                btnAnon.classList.add('active');
+                btnUser.classList.remove('active');
+            } else {
+                btnUser.classList.add('active');
+                btnAnon.classList.remove('active');
+            }
+            submitBtn.textContent = 'Guardar cambios';
+            cancelBtn.style.display = '';
+            setStatus(container, 'Editando tu reseña.');
+            container.querySelector('.reviewsForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         submitBtn.addEventListener('click', function () {
             var rating = parseFloat(starsEl.getAttribute('data-selected') || '0');
             var comment = textarea.value.trim();
-            if (rating < 0.5) {
-                setStatus(container, 'Selecciona una puntuación de estrellas.');
-                return;
-            }
-            if (!comment) {
-                setStatus(container, 'Escribe un comentario.');
+            if (rating < 0.5 && !comment) {
+                setStatus(container, 'Indica una puntuación, un comentario, o ambos.');
                 return;
             }
             var client = apiClient();
@@ -225,14 +343,19 @@
                 setStatus(container, 'Necesitas iniciar sesión en Jellyfin para publicar una reseña (incluso en modo anónimo, nadie más verá tu nombre).');
                 return;
             }
+            var payload = { Comment: comment, AsAnonymous: mode === 'anon' };
+            if (rating >= 0.5) {
+                payload.Rating = rating;
+            }
+
             submitBtn.disabled = true;
-            setStatus(container, 'Publicando...');
-            submitReview(itemId, { Rating: rating, Comment: comment, AsAnonymous: mode === 'anon' })
+            var isEditing = editingId !== null;
+            setStatus(container, isEditing ? 'Guardando...' : 'Publicando...');
+            var action = isEditing ? updateReview(itemId, editingId, payload) : submitReview(itemId, payload);
+            action
                 .then(function () {
-                    setStatus(container, 'Reseña publicada.');
-                    textarea.value = '';
-                    starsEl.setAttribute('data-selected', '0');
-                    setStarsValue(starsEl, 0);
+                    setStatus(container, isEditing ? 'Reseña actualizada.' : 'Reseña publicada.');
+                    resetForm();
                     refresh();
                 })
                 .catch(function (err) {
