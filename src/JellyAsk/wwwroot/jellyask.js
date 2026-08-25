@@ -113,7 +113,15 @@
         setTimeout(function () { textarea.focus(); }, 50);
     }
 
+    function isDashboardRoute() {
+        var hash = window.location.hash || '';
+        return /#!?\/dashboard/.test(hash);
+    }
+
     function ensureMenuButton() {
+        if (isDashboardRoute()) {
+            return;
+        }
         var scrollContainer = document.querySelector('.mainDrawer-scrollContainer');
         if (!scrollContainer) {
             return;
@@ -146,8 +154,19 @@
     injectStyle();
     ensureMenuButton();
 
+    // Se defiere a un frame aparte para no insertar el nodo en mitad del
+    // commit síncrono de React (el cliente web de Jellyfin), que es lo que
+    // provocaba el error "e.map is not a function" al entrar al Dashboard.
+    var pendingCheck = false;
     var observer = new MutationObserver(function () {
-        ensureMenuButton();
+        if (pendingCheck) {
+            return;
+        }
+        pendingCheck = true;
+        requestAnimationFrame(function () {
+            pendingCheck = false;
+            ensureMenuButton();
+        });
     });
     observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
 })();
