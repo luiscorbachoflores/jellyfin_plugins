@@ -7,6 +7,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Master switch for logging searches.</summary>
     public bool Enabled { get; set; } = true;
 
+    /// <summary>
+    /// Writes each finished search to Jellyfin's Activity Log (Dashboard > Activity). Notification plugins that listen
+    /// to activity entries (e.g. Telegram Notifier) can then forward it.
+    /// </summary>
+    public bool WriteToActivityLog { get; set; } = true;
+
     /// <summary>URL that receives a JSON POST per search. Empty = log only.</summary>
     public string WebhookUrl { get; set; } = string.Empty;
 
@@ -16,7 +22,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public string TelegramChatId { get; set; } = string.Empty;
 
-    /// <summary>Only notify (webhook) searches that returned nothing: "someone wants X and it is not in the library".</summary>
+    /// <summary>Only notify (Activity Log + webhook) searches that returned nothing: "someone wants X and it is not in the library".</summary>
     public bool NotifyOnlyNoResults { get; set; }
 
     /// <summary>

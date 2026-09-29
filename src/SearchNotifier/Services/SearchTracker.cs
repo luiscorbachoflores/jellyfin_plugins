@@ -37,12 +37,14 @@ public class SearchTracker : IDisposable
     private readonly Dictionary<string, Pending> _pending = new();
     private readonly SearchLogStore _store;
     private readonly WebhookNotifier _notifier;
+    private readonly ActivityLogWriter _activity;
     private readonly ILogger<SearchTracker> _logger;
 
-    public SearchTracker(SearchLogStore store, WebhookNotifier notifier, ILogger<SearchTracker> logger)
+    public SearchTracker(SearchLogStore store, WebhookNotifier notifier, ActivityLogWriter activity, ILogger<SearchTracker> logger)
     {
         _store = store;
         _notifier = notifier;
+        _activity = activity;
         _logger = logger;
     }
 
@@ -141,6 +143,7 @@ public class SearchTracker : IDisposable
 
             _store.Append(ev);
             _logger.LogInformation("Search Notifier: {User} searched \"{Term}\" ({Count} results)", ev.UserName, ev.Term, ev.TotalResults?.ToString() ?? "?");
+            _activity.Write(ev);
             _notifier.Notify(ev);
         }
         catch (Exception ex)

@@ -45,8 +45,9 @@ Código en [`src/LanguageBadges`](src/LanguageBadges).
 
 ## Search Notifier
 
-Avisa al admin cuando un usuario busca algo. Detecta cualquier petición con `searchTerm` (web, Android, Swiftfin, Kodi...), agrupa el "buscar mientras escribes" en una sola búsqueda y guarda **solo** usuario, término, nº de resultados y fecha. Opcionalmente envía un webhook JSON (`text` para Slack/Mattermost, `content` para Discord, o Telegram directo con `chat_id`). La opción "solo sin resultados" avisa de lo que alguien busca y no tienes.
+Avisa al admin cuando un usuario busca algo. Detecta cualquier petición con `searchTerm` (web, Android, Swiftfin, Kodi...), agrupa el "buscar mientras escribes" en una sola búsqueda y guarda **solo** usuario, término, nº de resultados y fecha. Cada búsqueda se anota en el **Registro de actividad** del panel de administración (visible ahí y reutilizable por cualquier plugin de notificaciones que lea la actividad, p. ej. hacia Telegram). Opcionalmente envía además un webhook JSON (`text` para Slack/Mattermost, `content` para Discord, o Telegram directo con `chat_id`). La opción "solo sin resultados" avisa de lo que alguien busca y no tienes.
 
+![Registro de actividad del panel](docs/img/9-actividad.png)
 ![Búsqueda sin resultados](docs/img/5-ana-busca-sin-resultados.png)
 ![Aviso en el móvil (maqueta con el texto real del webhook)](docs/img/8-aviso-movil.png)
 ![Configuración y últimas búsquedas](docs/img/7-config-searchnotifier.png)

@@ -10,11 +10,15 @@
             <div class="content-primary">
                 <h2 class="sectionTitle">Search Notifier</h2>
                 <p>Registra qu&eacute; buscan los usuarios (usuario, t&eacute;rmino, n&ordm; de resultados y fecha; nada m&aacute;s)
-                   y opcionalmente lo env&iacute;a a un webhook.</p>
+                   lo muestra en el <b>Registro de actividad</b> del panel y opcionalmente lo env&iacute;a a un webhook.</p>
 
                 <form id="SearchNotifierConfigForm">
                     <div class="checkboxContainer">
                         <label><input is="emby-checkbox" type="checkbox" id="Enabled" /><span>Registrar b&uacute;squedas</span></label>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label><input is="emby-checkbox" type="checkbox" id="WriteToActivityLog" /><span>Mostrar en el Registro de actividad del panel</span></label>
+                        <div class="fieldDescription checkboxFieldDescription">Cada b&uacute;squeda aparece en Panel &rarr; Actividad. Los plugins que reenv&iacute;an la actividad (p. ej. Telegram Notifier) la recibir&aacute;n desde ah&iacute;.</div>
                     </div>
                     <div class="inputContainer">
                         <input is="emby-input" type="url" id="WebhookUrl" label="URL del webhook (vac&iacute;o = solo registro)" />
@@ -29,7 +33,7 @@
                     </div>
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label><input is="emby-checkbox" type="checkbox" id="NotifyOnlyNoResults" /><span>Notificar solo b&uacute;squedas sin resultados</span></label>
-                        <div class="fieldDescription checkboxFieldDescription">&laquo;Alguien quiere ver algo que no est&aacute; en la biblioteca&raquo;. El registro guarda todas igualmente.</div>
+                        <div class="fieldDescription checkboxFieldDescription">&laquo;Alguien quiere ver algo que no est&aacute; en la biblioteca&raquo;. Vale para el Registro de actividad y el webhook; el registro propio guarda todas igualmente.</div>
                     </div>
                     <div class="inputContainer">
                         <input is="emby-input" type="number" id="DebounceSeconds" min="1" max="60" label="Segundos de pausa para dar una b&uacute;squeda por terminada" />
@@ -71,7 +75,7 @@
         <script type="text/javascript">
             (function () {
                 var pluginId = '8927bd8c-5eeb-4745-90c4-edb2ebd236cc';
-                var bools = ['Enabled', 'NotifyOnlyNoResults'];
+                var bools = ['Enabled', 'WriteToActivityLog', 'NotifyOnlyNoResults'];
                 var texts = ['WebhookUrl', 'TelegramChatId', 'ExcludedUsers'];
                 var nums = ['DebounceSeconds', 'MinTermLength', 'MaxLogEntries'];
                 var page = document.querySelector('#SearchNotifierConfigPage');

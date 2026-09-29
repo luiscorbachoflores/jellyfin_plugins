@@ -20,6 +20,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     {
         serviceCollection.AddSingleton<SearchLogStore>();
         serviceCollection.AddSingleton<WebhookNotifier>();
+        serviceCollection.AddSingleton<ActivityLogWriter>();
         serviceCollection.AddSingleton<SearchTracker>();
         serviceCollection.AddTransient<IStartupFilter, SearchDetectionStartupFilter>();
     }

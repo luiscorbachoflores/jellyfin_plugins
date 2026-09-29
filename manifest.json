@@ -112,7 +112,7 @@
                 "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.LanguageBadges-jellyfin12.zip).",
                 "targetAbi": "10.11.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/languagebadges-v1.0.0.0/Jellyfin.Plugin.LanguageBadges.zip",
-                "checksum": "311f0d18e0cb5621ba2254ad01ab5f1a",
+                "checksum": "58d7f56415d980753e2b35f4c0282682",
                 "timestamp": "2026-09-29T00:00:00Z"
             }
         ]
@@ -130,7 +130,7 @@
                 "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.SearchNotifier-jellyfin12.zip).",
                 "targetAbi": "10.11.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/searchnotifier-v1.0.0.0/Jellyfin.Plugin.SearchNotifier.zip",
-                "checksum": "fe87465e56f009e60d499f132500713e",
+                "checksum": "f0de564994458d19e0eb22d4520fb0db",
                 "timestamp": "2026-09-29T00:00:00Z"
             }
         ]
