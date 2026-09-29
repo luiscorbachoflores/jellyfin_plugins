@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Search Notifier</title>
+</head>
+<body>
+    <div id="SearchNotifierConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <h2 class="sectionTitle">Search Notifier</h2>
+                <p>Registra qu&eacute; buscan los usuarios (usuario, t&eacute;rmino, n&ordm; de resultados y fecha; nada m&aacute;s)
+                   y opcionalmente lo env&iacute;a a un webhook.</p>
+
+                <form id="SearchNotifierConfigForm">
+                    <div class="checkboxContainer">
+                        <label><input is="emby-checkbox" type="checkbox" id="Enabled" /><span>Registrar b&uacute;squedas</span></label>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="url" id="WebhookUrl" label="URL del webhook (vac&iacute;o = solo registro)" />
+                        <div class="fieldDescription">
+                            Se hace <code>POST</code> con JSON: <code>event, server, user, userId, term, totalResults, resultsByType, timestamp, text, content</code>.
+                            <code>text</code> sirve para Slack/Mattermost, <code>content</code> para Discord.
+                            Para Telegram usa <code>https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage</code> y rellena el chat_id de abajo.
+                        </div>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="text" id="TelegramChatId" label="Telegram chat_id (opcional)" />
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label><input is="emby-checkbox" type="checkbox" id="NotifyOnlyNoResults" /><span>Notificar solo b&uacute;squedas sin resultados</span></label>
+                        <div class="fieldDescription checkboxFieldDescription">&laquo;Alguien quiere ver algo que no est&aacute; en la biblioteca&raquo;. El registro guarda todas igualmente.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="number" id="DebounceSeconds" min="1" max="60" label="Segundos de pausa para dar una b&uacute;squeda por terminada" />
+                        <div class="fieldDescription">Los clientes buscan mientras se escribe; se agrupa en una sola entrada con el t&eacute;rmino final.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="number" id="MinTermLength" min="1" max="20" label="Longitud m&iacute;nima del t&eacute;rmino" />
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="text" id="ExcludedUsers" label="Usuarios excluidos (separados por comas)" />
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="number" id="MaxLogEntries" min="10" max="100000" label="M&aacute;ximo de entradas en el registro" />
+                    </div>
+                    <div style="display:flex;gap:.6em;flex-wrap:wrap">
+                        <button is="emby-button" type="submit" class="raised button-submit"><span>Guardar</span></button>
+                        <button is="emby-button" type="button" id="snTest" class="raised"><span>Probar webhook</span></button>
+                    </div>
+                    <p id="snTestResult"></p>
+                </form>
+
+                <div class="verticalSection" style="margin-top:2em">
+                    <div style="display:flex;align-items:center;gap:.6em;flex-wrap:wrap">
+                        <h2 class="sectionTitle" style="margin:0">&Uacute;ltimas b&uacute;squedas</h2>
+                        <button is="emby-button" type="button" id="snRefresh" class="raised"><span>Actualizar</span></button>
+                        <button is="emby-button" type="button" id="snClear" class="raised"><span>Vaciar registro</span></button>
+                    </div>
+                    <div style="overflow-x:auto;margin-top:1em">
+                        <table id="snTable" style="width:100%;border-collapse:collapse;text-align:left">
+                            <thead>
+                                <tr><th style="padding:.4em">Fecha</th><th style="padding:.4em">Usuario</th><th style="padding:.4em">B&uacute;squeda</th><th style="padding:.4em">Resultados</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = '8927bd8c-5eeb-4745-90c4-edb2ebd236cc';
+                var bools = ['Enabled', 'NotifyOnlyNoResults'];
+                var texts = ['WebhookUrl', 'TelegramChatId', 'ExcludedUsers'];
+                var nums = ['DebounceSeconds', 'MinTermLength', 'MaxLogEntries'];
+                var page = document.querySelector('#SearchNotifierConfigPage');
+
+                function esc(s) {
+                    var d = document.createElement('div');
+                    d.textContent = s == null ? '' : String(s);
+                    return d.innerHTML;
+                }
+
+                function loadLog() {
+                    ApiClient.fetch({ url: ApiClient.getUrl('SearchNotifier/Log', { limit: 200 }), type: 'GET', dataType: 'json' })
+                        .then(function (rows) {
+                            var tbody = page.querySelector('#snTable tbody');
+                            if (!rows.length) {
+                                tbody.innerHTML = '<tr><td colspan="4" style="padding:.4em;opacity:.7">Sin b&uacute;squedas registradas.</td></tr>';
+                                return;
+                            }
+                            tbody.innerHTML = rows.map(function (r) {
+                                var n = r.TotalResults;
+                                var res = n == null ? '?' : (n === 0 ? '<b style="color:#ff8a65">0</b>' : esc(n));
+                                var by = Object.keys(r.ResultsByType || {}).map(function (k) { return k + ': ' + r.ResultsByType[k]; }).join(', ');
+                                return '<tr style="border-top:1px solid rgba(128,128,128,.25)">' +
+                                    '<td style="padding:.4em;white-space:nowrap">' + esc(new Date(r.TimestampUtc).toLocaleString()) + '</td>' +
+                                    '<td style="padding:.4em">' + esc(r.UserName) + '</td>' +
+                                    '<td style="padding:.4em">' + esc(r.Term) + '</td>' +
+                                    '<td style="padding:.4em" title="' + esc(by) + '">' + res + '</td></tr>';
+                            }).join('');
+                        });
+                }
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        bools.forEach(function (k) { page.querySelector('#' + k).checked = !!config[k]; });
+                        texts.concat(nums).forEach(function (k) { page.querySelector('#' + k).value = config[k] == null ? '' : config[k]; });
+                        Dashboard.hideLoadingMsg();
+                    });
+                    loadLog();
+                });
+
+                page.querySelector('#SearchNotifierConfigForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        bools.forEach(function (k) { config[k] = page.querySelector('#' + k).checked; });
+                        texts.forEach(function (k) { config[k] = page.querySelector('#' + k).value.trim(); });
+                        nums.forEach(function (k) { config[k] = parseInt(page.querySelector('#' + k).value, 10) || config[k]; });
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (r) {
+                            Dashboard.processPluginConfigurationUpdateResult(r);
+                        });
+                    });
+                    return false;
+                });
+
+                page.querySelector('#snTest').addEventListener('click', function () {
+                    var out = page.querySelector('#snTestResult');
+                    out.textContent = 'Enviando...';
+                    var url = page.querySelector('#WebhookUrl').value.trim();
+                    ApiClient.fetch({ url: ApiClient.getUrl('SearchNotifier/TestWebhook', url ? { url: url } : {}), type: 'POST', dataType: 'json' })
+                        .then(function (r) { out.textContent = (r.ok ? 'OK: ' : 'Error: ') + r.message; })
+                        .catch(function () { out.textContent = 'Error: configura primero una URL.'; });
+                });
+
+                page.querySelector('#snRefresh').addEventListener('click', loadLog);
+                page.querySelector('#snClear').addEventListener('click', function () {
+                    if (!confirm('¿Vaciar todo el registro de búsquedas?')) { return; }
+                    ApiClient.fetch({ url: ApiClient.getUrl('SearchNotifier/Log'), type: 'DELETE' }).then(loadLog, loadLog);
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

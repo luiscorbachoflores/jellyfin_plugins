@@ -98,5 +98,41 @@
                 "timestamp": "2026-07-15T00:00:00Z"
             }
         ]
+    },
+    {
+        "guid": "56e27219-5a61-4f3b-96c2-e7e2e2076c0a",
+        "name": "Language Badges",
+        "description": "Muestra de forma clara los idiomas de audio y subtitulos de cada pelicula/serie sobre el poster y en la ficha.",
+        "overview": "Insignias ES/EN/LAT/JA... (audio) y \"sub XX\" (subtitulos) inyectadas sin modificar jellyfin-web; resalta los idiomas que le importan al usuario.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.LanguageBadges-jellyfin12.zip).",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/languagebadges-v1.0.0.0/Jellyfin.Plugin.LanguageBadges.zip",
+                "checksum": "311f0d18e0cb5621ba2254ad01ab5f1a",
+                "timestamp": "2026-09-29T00:00:00Z"
+            }
+        ]
+    },
+    {
+        "guid": "8927bd8c-5eeb-4745-90c4-edb2ebd236cc",
+        "name": "Search Notifier",
+        "description": "Registra lo que buscan los usuarios y lo notifica a un webhook (Telegram, Discord, Slack...).",
+        "overview": "Detecta las busquedas (searchTerm) de cualquier cliente, las agrupa y avisa al admin; opcion de avisar solo cuando no hay resultados.",
+        "owner": "luiscorbachoflores",
+        "category": "Notifications",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.SearchNotifier-jellyfin12.zip).",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/searchnotifier-v1.0.0.0/Jellyfin.Plugin.SearchNotifier.zip",
+                "checksum": "fe87465e56f009e60d499f132500713e",
+                "timestamp": "2026-09-29T00:00:00Z"
+            }
+        ]
     }
 ]

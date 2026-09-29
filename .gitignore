@@ -3,3 +3,4 @@ obj/
 build/
 *.zip
 .DS_Store
+dist/
