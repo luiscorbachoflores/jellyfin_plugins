@@ -4,34 +4,43 @@
     }
     window.__reviewsPluginLoaded = true;
 
+    // Tokens de color: un solo sitio donde cambiar la paleta del widget.
     var STYLE = [
-        '.reviewsWidget{margin:1.5em 0;max-width:60em;}',
-        '.reviewsWidget h2{font-size:1.3em;margin:0 0 .6em 0;}',
+        '.reviewsWidget{--rv-accent:#e1573f;--rv-gold:#e6c75b;--rv-ink:inherit;--rv-muted:rgba(127,127,127,.9);--rv-line:rgba(255,255,255,.08);--rv-panel:rgba(255,255,255,.04);margin:1.8em 0;max-width:60em;}',
+        '.reviewsWidget h2{font-size:1.3em;margin:0 0 .6em 0;letter-spacing:.01em;}',
         '.reviewsAverage{font-size:.95em;opacity:.85;margin-bottom:1em;}',
-        '.reviewsForm{display:flex;flex-direction:column;gap:.6em;margin-bottom:1.5em;padding:1em;border-radius:6px;background:rgba(255,255,255,.05);}',
+        '.reviewsForm{display:flex;flex-direction:column;gap:.7em;margin-bottom:1.6em;padding:1.1em 1.2em;border-radius:10px;background:var(--rv-panel);border:1px solid var(--rv-line);}',
         '.reviewsStars{display:inline-flex;cursor:pointer;font-size:1.7em;line-height:1;letter-spacing:.05em;}',
-        '.reviewsStars .star{position:relative;width:1em;display:inline-block;color:#555;}',
-        '.reviewsStars .starFill{position:absolute;top:0;left:0;width:0%;overflow:hidden;color:#00a4dc;pointer-events:none;white-space:nowrap;}',
+        '.reviewsStars .star{position:relative;width:1em;display:inline-block;color:#555;transition:transform .12s ease;}',
+        '.reviewsStars:hover .star:hover{transform:scale(1.12);}',
+        '.reviewsStars .starFill{position:absolute;top:0;left:0;width:0%;overflow:hidden;color:var(--rv-gold);pointer-events:none;white-space:nowrap;}',
         '.reviewsStarsHint{font-size:.8em;opacity:.7;}',
         '.reviewsToggle{display:flex;align-items:center;gap:.6em;font-size:.9em;}',
-        '.reviewsToggle button{padding:.3em .8em;border-radius:14px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;}',
-        '.reviewsToggle button.active{background:#00a4dc;border-color:#00a4dc;color:#fff;}',
-        '.reviewsForm textarea{min-height:4em;resize:vertical;font-family:inherit;font-size:.95em;padding:.6em;border-radius:4px;border:1px solid #444;background:rgba(255,255,255,.06);color:inherit;}',
-        '.reviewsSubmit{align-self:flex-start;padding:.45em 1.3em;border-radius:4px;border:none;background:#00a4dc;color:#fff;cursor:pointer;font-size:.9em;}',
+        '.reviewsToggle button{padding:.3em .9em;border-radius:14px;border:1px solid var(--rv-line);background:transparent;color:inherit;cursor:pointer;transition:background .15s ease,border-color .15s ease;}',
+        '.reviewsToggle button.active{background:var(--rv-accent);border-color:var(--rv-accent);color:#fff;}',
+        '.reviewsForm textarea{min-height:4em;resize:vertical;font-family:inherit;font-size:.95em;padding:.6em .7em;border-radius:6px;border:1px solid var(--rv-line);background:rgba(255,255,255,.05);color:inherit;}',
+        '.reviewsForm textarea:focus{outline:none;border-color:var(--rv-gold);}',
+        '.reviewsSubmit{align-self:flex-start;padding:.5em 1.4em;border-radius:6px;border:none;background:var(--rv-accent);color:#fff;font-weight:600;cursor:pointer;font-size:.9em;transition:filter .15s ease;}',
+        '.reviewsSubmit:hover{filter:brightness(1.08);}',
         '.reviewsSubmit:disabled{opacity:.5;cursor:default;}',
-        '.reviewsCancelEdit{align-self:flex-start;padding:.4em 1em;border-radius:4px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;font-size:.85em;}',
+        '.reviewsCancelEdit{align-self:flex-start;padding:.4em 1em;border-radius:6px;border:1px solid var(--rv-line);background:transparent;color:inherit;cursor:pointer;font-size:.85em;}',
         '.reviewsStatus{font-size:.85em;opacity:.8;min-height:1.2em;}',
-        '.reviewsList .reviewItem{padding:.75em 0;border-top:1px solid rgba(255,255,255,.08);}',
-        '.reviewsList .reviewHead{display:flex;align-items:center;justify-content:space-between;gap:1em;font-size:.9em;opacity:.9;margin-bottom:.3em;flex-wrap:wrap;}',
+        '.reviewsList .reviewItem{padding:.9em .2em;border-top:1px solid var(--rv-line);}',
+        '.reviewsList .reviewHead{display:flex;align-items:center;justify-content:space-between;gap:1em;font-size:.9em;margin-bottom:.35em;flex-wrap:wrap;}',
         '.reviewsList .reviewUser{font-weight:600;}',
-        '.reviewsList .reviewDate{opacity:.75;}',
-        '.reviewsList .reviewStarsDisplay{font-size:1.1em;letter-spacing:.05em;}',
-        '.reviewsList .reviewNoRating{font-size:.85em;opacity:.7;font-style:italic;}',
-        '.reviewsList .reviewComment{font-size:.95em;white-space:pre-wrap;margin-top:.3em;}',
+        '.reviewsList .reviewDate{opacity:.6;font-size:.9em;}',
+        '.reviewsList .reviewStarsDisplay{font-size:1.1em;letter-spacing:.05em;color:var(--rv-gold);}',
+        '.reviewsList .reviewNoRating{font-size:.85em;opacity:.65;font-style:italic;}',
+        '.reviewsList .reviewComment{font-size:.95em;line-height:1.5;white-space:pre-wrap;margin-top:.35em;}',
         '.reviewManage{display:flex;gap:.5em;margin-left:auto;}',
-        '.reviewManage button{padding:.15em .7em;font-size:.8em;border-radius:12px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;}',
-        '.reviewManage button:hover{border-color:#00a4dc;}',
-        '.reviewsEmpty{opacity:.7;font-size:.9em;}'
+        '.reviewManage button{padding:.15em .7em;font-size:.8em;border-radius:12px;border:1px solid var(--rv-line);background:transparent;color:inherit;cursor:pointer;}',
+        '.reviewManage button:hover{border-color:var(--rv-accent);color:var(--rv-accent);}',
+        '.reviewsEmpty{opacity:.7;font-size:.9em;}',
+        // Reseña del director: sello propio en lugar de la nota normal.
+        '.reviewItem.isDirector{position:relative;margin:.6em 0;padding:1em 1.1em;border:1px solid var(--rv-gold);border-radius:10px;background:linear-gradient(135deg,rgba(225,87,63,.14),rgba(230,199,91,.08));border-top:1px solid var(--rv-gold);}',
+        '.directorSeal{display:inline-flex;align-items:center;gap:.45em;padding:.25em .8em .25em .6em;border-radius:999px;background:var(--rv-accent);color:#fff;font-size:.8em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}',
+        '.directorSeal .clap{font-size:1.1em;line-height:1;}',
+        '.reviewItem.isDirector .reviewStarsDisplay{margin-top:.4em;}'
     ].join('');
 
     function injectStyle() {
@@ -167,9 +176,14 @@
         listEl.innerHTML = data.Reviews.map(function (r) {
             var date = new Date(r.CreatedAt);
             var dateStr = isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+            // La reseña de Tito (el director) lleva sello propio: "Nota del director".
+            var isDirector = /^tito$/i.test(String(r.DisplayName || '').trim());
             var ratingHtml = r.Rating > 0
                 ? '<div class="reviewStarsDisplay">' + starsHtml(r.Rating, false) + '</div>'
                 : '<div class="reviewNoRating">Sin puntuación</div>';
+            if (isDirector) {
+                ratingHtml = '<div class="directorSeal"><span class="clap">🎬</span>Nota del director</div>' + ratingHtml;
+            }
             var commentHtml = r.Comment
                 ? '<div class="reviewComment">' + escapeHtml(r.Comment) + '</div>'
                 : '';
@@ -180,7 +194,7 @@
                   '</span>'
                 : '';
             return '' +
-                '<div class="reviewItem" data-review-id="' + r.Id + '">' +
+                '<div class="reviewItem' + (isDirector ? ' isDirector' : '') + '" data-review-id="' + r.Id + '">' +
                 '  <div class="reviewHead">' +
                 '    <span class="reviewUser">' + escapeHtml(r.DisplayName) + '</span>' +
                 '    <span class="reviewDate">' + dateStr + '</span>' +
