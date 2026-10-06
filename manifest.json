@@ -8,6 +8,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.4.0.0",
+                "changelog": "Publicar sin nombre: casilla en lugar de los botones Anónimo/Usuario Jellyfin, con vista previa de quién firma la reseña. Rediseño visual del widget con tipografía editorial (versalitas, serif en comentarios, filetes en lugar de cajas), foco visible y adaptación a móvil. La reseña del director conserva su sello propio.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.0.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "b378d9951c1aa0ae0de339561eb89de5",
+                "timestamp": "2026-10-06T00:00:00Z"
+            },
+            {
                 "version": "1.3.0.0",
                 "changelog": "Reseña del director: las reseñas de Tito se muestran con el sello \"Nota del director\" y un estilo propio. Rediseño visual del widget (tokens de color, jerarquía, estados de foco, adaptación a móvil). Compatible con Jellyfin 10.11.8 y 12.x.",
                 "targetAbi": "10.11.8.0",

@@ -6,41 +6,463 @@
 
     // Tokens de color: un solo sitio donde cambiar la paleta del widget.
     var STYLE = [
-        '.reviewsWidget{--rv-accent:#e1573f;--rv-gold:#e6c75b;--rv-ink:inherit;--rv-muted:rgba(127,127,127,.9);--rv-line:rgba(255,255,255,.08);--rv-panel:rgba(255,255,255,.04);margin:1.8em 0;max-width:60em;}',
-        '.reviewsWidget h2{font-size:1.3em;margin:0 0 .6em 0;letter-spacing:.01em;}',
-        '.reviewsAverage{font-size:.95em;opacity:.85;margin-bottom:1em;}',
-        '.reviewsForm{display:flex;flex-direction:column;gap:.7em;margin-bottom:1.6em;padding:1.1em 1.2em;border-radius:10px;background:var(--rv-panel);border:1px solid var(--rv-line);}',
-        '.reviewsStars{display:inline-flex;cursor:pointer;font-size:1.7em;line-height:1;letter-spacing:.05em;}',
-        '.reviewsStars .star{position:relative;width:1em;display:inline-block;color:#555;transition:transform .12s ease;}',
-        '.reviewsStars:hover .star:hover{transform:scale(1.12);}',
-        '.reviewsStars .starFill{position:absolute;top:0;left:0;width:0%;overflow:hidden;color:var(--rv-gold);pointer-events:none;white-space:nowrap;}',
-        '.reviewsStarsHint{font-size:.8em;opacity:.7;}',
-        '.reviewsToggle{display:flex;align-items:center;gap:.6em;font-size:.9em;}',
-        '.reviewsToggle button{padding:.3em .9em;border-radius:14px;border:1px solid var(--rv-line);background:transparent;color:inherit;cursor:pointer;transition:background .15s ease,border-color .15s ease;}',
-        '.reviewsToggle button.active{background:var(--rv-accent);border-color:var(--rv-accent);color:#fff;}',
-        '.reviewsForm textarea{min-height:4em;resize:vertical;font-family:inherit;font-size:.95em;padding:.6em .7em;border-radius:6px;border:1px solid var(--rv-line);background:rgba(255,255,255,.05);color:inherit;}',
-        '.reviewsForm textarea:focus{outline:none;border-color:var(--rv-gold);}',
-        '.reviewsSubmit{align-self:flex-start;padding:.5em 1.4em;border-radius:6px;border:none;background:var(--rv-accent);color:#fff;font-weight:600;cursor:pointer;font-size:.9em;transition:filter .15s ease;}',
-        '.reviewsSubmit:hover{filter:brightness(1.08);}',
-        '.reviewsSubmit:disabled{opacity:.5;cursor:default;}',
-        '.reviewsCancelEdit{align-self:flex-start;padding:.4em 1em;border-radius:6px;border:1px solid var(--rv-line);background:transparent;color:inherit;cursor:pointer;font-size:.85em;}',
-        '.reviewsStatus{font-size:.85em;opacity:.8;min-height:1.2em;}',
-        '.reviewsList .reviewItem{padding:.9em .2em;border-top:1px solid var(--rv-line);}',
-        '.reviewsList .reviewHead{display:flex;align-items:center;justify-content:space-between;gap:1em;font-size:.9em;margin-bottom:.35em;flex-wrap:wrap;}',
-        '.reviewsList .reviewUser{font-weight:600;}',
-        '.reviewsList .reviewDate{opacity:.6;font-size:.9em;}',
-        '.reviewsList .reviewStarsDisplay{font-size:1.1em;letter-spacing:.05em;color:var(--rv-gold);}',
-        '.reviewsList .reviewNoRating{font-size:.85em;opacity:.65;font-style:italic;}',
-        '.reviewsList .reviewComment{font-size:.95em;line-height:1.5;white-space:pre-wrap;margin-top:.35em;}',
-        '.reviewManage{display:flex;gap:.5em;margin-left:auto;}',
-        '.reviewManage button{padding:.15em .7em;font-size:.8em;border-radius:12px;border:1px solid var(--rv-line);background:transparent;color:inherit;cursor:pointer;}',
-        '.reviewManage button:hover{border-color:var(--rv-accent);color:var(--rv-accent);}',
-        '.reviewsEmpty{opacity:.7;font-size:.9em;}',
-        // Reseña del director: sello propio en lugar de la nota normal.
-        '.reviewItem.isDirector{position:relative;margin:.6em 0;padding:1em 1.1em;border:1px solid var(--rv-gold);border-radius:10px;background:linear-gradient(135deg,rgba(225,87,63,.14),rgba(230,199,91,.08));border-top:1px solid var(--rv-gold);}',
-        '.directorSeal{display:inline-flex;align-items:center;gap:.45em;padding:.25em .8em .25em .6em;border-radius:999px;background:var(--rv-accent);color:#fff;font-size:.8em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}',
-        '.directorSeal .clap{font-size:1.1em;line-height:1;}',
-        '.reviewItem.isDirector .reviewStarsDisplay{margin-top:.4em;}'
+        "/* =========================================================\n",
+        "   Titoteca \u00b7 Rese\u00f1as\n",
+        "   Registro editorial: tinta c\u00e1lida sobre fondo oscuro, filetes\n",
+        "   finos en lugar de cajas, serif para la voz del espectador,\n",
+        "   versalitas para la estructura. Coral = acci\u00f3n, mostaza = valor.\n",
+        "\n",
+        "   Serif propuesta (NO se carga aqu\u00ed; si se quiere, a\u00f1adir en el\n",
+        "   tema general):\n",
+        "   https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap\n",
+        "   Sin ella, cae en Iowan Old Style / Georgia con dignidad.\n",
+        "   ========================================================= */\n",
+        "\n",
+        ".reviewsWidget {\n",
+        "    --rv-accent: #e1573f;            /* coral: acciones */\n",
+        "    --rv-accent-ink: #f07a63;        /* coral aclarado para texto sobre oscuro */\n",
+        "    --rv-gold: #e6c75b;              /* mostaza: valor, director */\n",
+        "    --rv-gold-dim: rgba(230, 199, 91, .42); /* estrella vac\u00eda: visible, no compite */\n",
+        "    --rv-ink: #efe6d8;               /* papel c\u00e1lido */\n",
+        "    --rv-muted: #a89c8b;             /* gris c\u00e1lido, AA sobre el fondo */\n",
+        "    --rv-faint: #7d7264;\n",
+        "    --rv-line: rgba(239, 230, 216, .12);\n",
+        "    --rv-line-strong: rgba(239, 230, 216, .24);\n",
+        "    --rv-panel: rgba(239, 230, 216, .03);\n",
+        "    --rv-field: rgba(0, 0, 0, .22);\n",
+        "    --rv-serif: \"Newsreader\", \"Iowan Old Style\", \"Palatino Linotype\", Palatino, Georgia, serif;\n",
+        "    --rv-sans: inherit;\n",
+        "    --rv-ease: cubic-bezier(.2, .7, .2, 1);\n",
+        "\n",
+        "    margin: 2.4em 0 1.8em;\n",
+        "    max-width: 46em;\n",
+        "    color: var(--rv-ink);\n",
+        "    font-feature-settings: \"kern\", \"liga\";\n",
+        "}\n",
+        "\n",
+        "/* --- T\u00edtulo de secci\u00f3n: versalitas peque\u00f1as con filete -------- */\n",
+        ".reviewsWidget h2 {\n",
+        "    display: flex;\n",
+        "    align-items: center;\n",
+        "    gap: .9em;\n",
+        "    margin: 0 0 1.1em;\n",
+        "    font-family: var(--rv-sans);\n",
+        "    font-size: .74em;\n",
+        "    font-weight: 600;\n",
+        "    letter-spacing: .22em;\n",
+        "    text-transform: uppercase;\n",
+        "    color: var(--rv-muted);\n",
+        "}\n",
+        ".reviewsWidget h2::after {\n",
+        "    content: \"\";\n",
+        "    flex: 1;\n",
+        "    height: 1px;\n",
+        "    background: var(--rv-line);\n",
+        "}\n",
+        "\n",
+        "/* --- Media: la cifra que manda ------------------------------- */\n",
+        ".reviewsAverage {\n",
+        "    margin: 0 0 1.6em;\n",
+        "    font-family: var(--rv-serif);\n",
+        "    font-size: 1.32em;\n",
+        "    font-weight: 400;\n",
+        "    line-height: 1.3;\n",
+        "    color: var(--rv-ink);\n",
+        "    font-variant-numeric: lining-nums tabular-nums;\n",
+        "}\n",
+        "\n",
+        "/* --- Formulario: sin caja, solo un filete superior ----------- */\n",
+        ".reviewsForm {\n",
+        "    display: flex;\n",
+        "    flex-direction: column;\n",
+        "    gap: .85em;\n",
+        "    margin-bottom: 2.2em;\n",
+        "    padding: 1.2em 0 0;\n",
+        "    border-top: 1px solid var(--rv-line);\n",
+        "    background: none;\n",
+        "}\n",
+        "\n",
+        "/* Estrellas */\n",
+        ".reviewsStars {\n",
+        "    display: inline-flex;\n",
+        "    gap: .08em;\n",
+        "    cursor: pointer;\n",
+        "    font-size: 1.75em;\n",
+        "    line-height: 1;\n",
+        "    user-select: none;\n",
+        "    -webkit-user-select: none;\n",
+        "}\n",
+        ".reviewsStars .star {\n",
+        "    position: relative;\n",
+        "    display: inline-block;\n",
+        "    width: 1em;\n",
+        "    color: var(--rv-gold-dim);\n",
+        "    transition: transform .14s var(--rv-ease), color .14s var(--rv-ease);\n",
+        "}\n",
+        ".reviewsStars[data-interactive] .star:hover {\n",
+        "    transform: translateY(-1px);\n",
+        "}\n",
+        ".reviewsStars:not([data-interactive]) {\n",
+        "    cursor: default;\n",
+        "}\n",
+        ".reviewsStars .starFill {\n",
+        "    position: absolute;\n",
+        "    top: 0;\n",
+        "    left: 0;\n",
+        "    width: 0%;\n",
+        "    overflow: hidden;\n",
+        "    white-space: nowrap;\n",
+        "    color: var(--rv-gold);\n",
+        "    pointer-events: none;\n",
+        "}\n",
+        "\n",
+        ".reviewsStarsHint {\n",
+        "    max-width: 38em;\n",
+        "    font-size: .8em;\n",
+        "    line-height: 1.5;\n",
+        "    color: var(--rv-faint);\n",
+        "}\n",
+        "\n",
+        "/* Toggle an\u00f3nimo / usuario: texto subrayado, no pills */\n",
+        ".reviewsToggle {\n",
+        "    display: flex;\n",
+        "    align-items: baseline;\n",
+        "    flex-wrap: wrap;\n",
+        "    gap: .2em 1.1em;\n",
+        "    font-size: .88em;\n",
+        "    color: var(--rv-muted);\n",
+        "}\n",
+        ".reviewsToggle > span {\n",
+        "    font-size: .82em;\n",
+        "    letter-spacing: .14em;\n",
+        "    text-transform: uppercase;\n",
+        "}\n",
+        ".reviewsToggle button {\n",
+        "    padding: .25em 0;\n",
+        "    border: 0;\n",
+        "    border-bottom: 1px solid transparent;\n",
+        "    border-radius: 0;\n",
+        "    background: none;\n",
+        "    color: var(--rv-muted);\n",
+        "    font: inherit;\n",
+        "    cursor: pointer;\n",
+        "    transition: color .15s var(--rv-ease), border-color .15s var(--rv-ease);\n",
+        "}\n",
+        ".reviewsToggle button:hover {\n",
+        "    color: var(--rv-ink);\n",
+        "}\n",
+        ".reviewsToggle button.active {\n",
+        "    color: var(--rv-ink);\n",
+        "    border-bottom-color: var(--rv-accent);\n",
+        "}\n",
+        "\n",
+        "/* Anonimato (checkbox) */\n",
+        ".reviewsAnonCheck {\n",
+        "    display: inline-flex;\n",
+        "    align-items: center;\n",
+        "    gap: .6em;\n",
+        "    align-self: flex-start;\n",
+        "    font-size: .88em;\n",
+        "    color: var(--rv-muted);\n",
+        "    cursor: pointer;\n",
+        "    user-select: none;\n",
+        "    -webkit-user-select: none;\n",
+        "}\n",
+        ".reviewsAnonCheck:hover {\n",
+        "    color: var(--rv-ink);\n",
+        "}\n",
+        ".reviewsAnonInput {\n",
+        "    -webkit-appearance: none;\n",
+        "    appearance: none;\n",
+        "    flex: none;\n",
+        "    width: 1em;\n",
+        "    height: 1em;\n",
+        "    margin: 0;\n",
+        "    border: 1px solid var(--rv-line-strong);\n",
+        "    border-radius: 2px;\n",
+        "    background: transparent;\n",
+        "    display: inline-grid;\n",
+        "    place-content: center;\n",
+        "    cursor: pointer;\n",
+        "    transition: border-color .15s var(--rv-ease), background-color .15s var(--rv-ease);\n",
+        "}\n",
+        ".reviewsAnonInput::before {\n",
+        "    content: \"\";\n",
+        "    width: .5em;\n",
+        "    height: .28em;\n",
+        "    border-left: 1.5px solid #1a1411;\n",
+        "    border-bottom: 1.5px solid #1a1411;\n",
+        "    transform: translateY(-.06em) rotate(-45deg) scale(0);\n",
+        "    transition: transform .14s var(--rv-ease);\n",
+        "}\n",
+        ".reviewsAnonInput:checked {\n",
+        "    background: var(--rv-gold);\n",
+        "    border-color: var(--rv-gold);\n",
+        "}\n",
+        ".reviewsAnonInput:checked::before {\n",
+        "    transform: translateY(-.06em) rotate(-45deg) scale(1);\n",
+        "}\n",
+        ".reviewsAuthorPreview {\n",
+        "    margin-top: -.35em;\n",
+        "    font-size: .8em;\n",
+        "    font-style: italic;\n",
+        "    color: var(--rv-faint);\n",
+        "}\n",
+        "\n",
+        "/* Campo de texto: serif, l\u00ednea base en lugar de caja */\n",
+        ".reviewsForm textarea {\n",
+        "    min-height: 5.5em;\n",
+        "    resize: vertical;\n",
+        "    padding: .7em .8em;\n",
+        "    border: 1px solid var(--rv-line);\n",
+        "    border-radius: 2px;\n",
+        "    background: var(--rv-field);\n",
+        "    color: var(--rv-ink);\n",
+        "    font-family: var(--rv-serif);\n",
+        "    font-size: 1.02em;\n",
+        "    line-height: 1.55;\n",
+        "    transition: border-color .15s var(--rv-ease);\n",
+        "}\n",
+        ".reviewsForm textarea::placeholder {\n",
+        "    color: var(--rv-faint);\n",
+        "    font-style: italic;\n",
+        "}\n",
+        ".reviewsForm textarea:hover {\n",
+        "    border-color: var(--rv-line-strong);\n",
+        "}\n",
+        ".reviewsForm textarea:focus {\n",
+        "    outline: none;\n",
+        "    border-color: var(--rv-gold);\n",
+        "}\n",
+        "\n",
+        "/* Acciones */\n",
+        ".reviewsSubmit {\n",
+        "    align-self: flex-start;\n",
+        "    padding: .62em 1.5em;\n",
+        "    border: 1px solid var(--rv-accent);\n",
+        "    border-radius: 2px;\n",
+        "    background: var(--rv-accent);\n",
+        "    color: #fff8f2;\n",
+        "    font: inherit;\n",
+        "    font-size: .8em;\n",
+        "    font-weight: 600;\n",
+        "    letter-spacing: .14em;\n",
+        "    text-transform: uppercase;\n",
+        "    cursor: pointer;\n",
+        "    transition: background-color .15s var(--rv-ease), border-color .15s var(--rv-ease);\n",
+        "}\n",
+        ".reviewsSubmit:hover {\n",
+        "    background: #c94a34;\n",
+        "    border-color: #c94a34;\n",
+        "}\n",
+        ".reviewsSubmit:disabled {\n",
+        "    opacity: .45;\n",
+        "    cursor: default;\n",
+        "}\n",
+        ".reviewsCancelEdit {\n",
+        "    align-self: flex-start;\n",
+        "    margin-top: -.3em;\n",
+        "    padding: .2em 0;\n",
+        "    border: 0;\n",
+        "    border-bottom: 1px solid var(--rv-line-strong);\n",
+        "    border-radius: 0;\n",
+        "    background: none;\n",
+        "    color: var(--rv-muted);\n",
+        "    font: inherit;\n",
+        "    font-size: .82em;\n",
+        "    cursor: pointer;\n",
+        "}\n",
+        ".reviewsCancelEdit:hover {\n",
+        "    color: var(--rv-ink);\n",
+        "    border-bottom-color: var(--rv-ink);\n",
+        "}\n",
+        ".reviewsStatus {\n",
+        "    min-height: 1.2em;\n",
+        "    font-size: .84em;\n",
+        "    color: var(--rv-muted);\n",
+        "}\n",
+        "\n",
+        "/* --- Lista de rese\u00f1as --------------------------------------- */\n",
+        ".reviewsList .reviewItem {\n",
+        "    padding: 1.25em 0;\n",
+        "    border-top: 1px solid var(--rv-line);\n",
+        "}\n",
+        ".reviewsList .reviewHead {\n",
+        "    display: flex;\n",
+        "    align-items: baseline;\n",
+        "    flex-wrap: wrap;\n",
+        "    gap: .2em .9em;\n",
+        "    margin-bottom: .45em;\n",
+        "    font-size: .9em;\n",
+        "}\n",
+        ".reviewsList .reviewUser {\n",
+        "    font-weight: 600;\n",
+        "    letter-spacing: .01em;\n",
+        "    color: var(--rv-ink);\n",
+        "}\n",
+        ".reviewsList .reviewDate {\n",
+        "    font-size: .88em;\n",
+        "    color: var(--rv-faint);\n",
+        "    font-variant-numeric: tabular-nums;\n",
+        "}\n",
+        ".reviewsList .reviewStarsDisplay {\n",
+        "    font-size: 1.02em;\n",
+        "    color: var(--rv-gold);\n",
+        "}\n",
+        ".reviewsList .reviewStarsDisplay .reviewsStars {\n",
+        "    font-size: 1em;\n",
+        "}\n",
+        ".reviewsList .reviewNoRating {\n",
+        "    font-size: .8em;\n",
+        "    letter-spacing: .12em;\n",
+        "    text-transform: uppercase;\n",
+        "    color: var(--rv-faint);\n",
+        "}\n",
+        ".reviewsList .reviewComment {\n",
+        "    margin-top: .55em;\n",
+        "    max-width: 38em;\n",
+        "    font-family: var(--rv-serif);\n",
+        "    font-size: 1.06em;\n",
+        "    line-height: 1.6;\n",
+        "    color: var(--rv-ink);\n",
+        "    white-space: pre-wrap;\n",
+        "    hyphens: auto;\n",
+        "    -webkit-hyphens: auto;\n",
+        "    text-wrap: pretty;\n",
+        "}\n",
+        "\n",
+        "/* Editar / Eliminar: enlaces discretos */\n",
+        ".reviewManage {\n",
+        "    display: flex;\n",
+        "    gap: 1em;\n",
+        "    margin-left: auto;\n",
+        "}\n",
+        ".reviewManage button {\n",
+        "    padding: .1em 0;\n",
+        "    border: 0;\n",
+        "    border-bottom: 1px solid transparent;\n",
+        "    border-radius: 0;\n",
+        "    background: none;\n",
+        "    color: var(--rv-faint);\n",
+        "    font: inherit;\n",
+        "    font-size: .82em;\n",
+        "    cursor: pointer;\n",
+        "    transition: color .15s var(--rv-ease), border-color .15s var(--rv-ease);\n",
+        "}\n",
+        ".reviewManage button:hover {\n",
+        "    color: var(--rv-accent-ink);\n",
+        "    border-bottom-color: currentColor;\n",
+        "}\n",
+        "\n",
+        ".reviewsEmpty {\n",
+        "    margin: 0;\n",
+        "    padding: 1.2em 0;\n",
+        "    border-top: 1px solid var(--rv-line);\n",
+        "    font-family: var(--rv-serif);\n",
+        "    font-style: italic;\n",
+        "    font-size: 1em;\n",
+        "    color: var(--rv-muted);\n",
+        "}\n",
+        "\n",
+        "/* --- Nota del director: filete lateral dorado ---------------- */\n",
+        ".reviewsList .reviewItem.isDirector,\n",
+        ".reviewItem.isDirector {\n",
+        "    position: relative;\n",
+        "    margin: 0;\n",
+        "    padding: 1.4em 0 1.4em 1.4em;\n",
+        "    border: 0;\n",
+        "    border-top: 1px solid var(--rv-line);\n",
+        "    border-radius: 0;\n",
+        "    background: none;\n",
+        "    box-shadow: inset 2px 0 0 var(--rv-gold);\n",
+        "}\n",
+        ".directorSeal {\n",
+        "    display: block;\n",
+        "    margin: 0 0 .5em;\n",
+        "    padding: 0;\n",
+        "    border-radius: 0;\n",
+        "    background: none;\n",
+        "    color: var(--rv-gold);\n",
+        "    font-size: .7em;\n",
+        "    font-weight: 600;\n",
+        "    letter-spacing: .24em;\n",
+        "    text-transform: uppercase;\n",
+        "}\n",
+        ".directorSeal .clap {\n",
+        "    display: none;\n",
+        "}\n",
+        ".reviewItem.isDirector .reviewStarsDisplay {\n",
+        "    margin-top: 0;\n",
+        "}\n",
+        ".reviewItem.isDirector .reviewComment {\n",
+        "    font-size: 1.12em;\n",
+        "    font-style: italic;\n",
+        "}\n",
+        "\n",
+        "/* --- Foco visible (teclado) --------------------------------- */\n",
+        ".reviewsWidget button:focus-visible,\n",
+        ".reviewsWidget textarea:focus-visible,\n",
+        ".reviewsWidget .reviewsStars:focus-visible,\n",
+        ".reviewsAnonInput:focus-visible {\n",
+        "    outline: 2px solid var(--rv-gold);\n",
+        "    outline-offset: 3px;\n",
+        "}\n",
+        ".reviewsWidget button:focus:not(:focus-visible) {\n",
+        "    outline: none;\n",
+        "}\n",
+        "\n",
+        "@media (prefers-reduced-motion: reduce) {\n",
+        "    .reviewsWidget *,\n",
+        "    .reviewsWidget *::before {\n",
+        "        transition: none !important;\n",
+        "    }\n",
+        "}\n",
+        "\n",
+        "/* --- M\u00f3vil --------------------------------------------------- */\n",
+        "@media (max-width: 600px) {\n",
+        "    .reviewsWidget {\n",
+        "        margin: 1.8em 0 1.4em;\n",
+        "        max-width: none;\n",
+        "    }\n",
+        "    .reviewsAverage {\n",
+        "        font-size: 1.18em;\n",
+        "    }\n",
+        "    .reviewsStars {\n",
+        "        font-size: 2.1em;   /* objetivo t\u00e1ctil ~34px por estrella */\n",
+        "        gap: .12em;\n",
+        "    }\n",
+        "    .reviewsToggle {\n",
+        "        gap: .2em 1.4em;\n",
+        "    }\n",
+        "    .reviewsToggle > span {\n",
+        "        flex-basis: 100%;\n",
+        "    }\n",
+        "    .reviewsToggle button,\n",
+        "    .reviewManage button,\n",
+        "    .reviewsCancelEdit {\n",
+        "        padding-top: .5em;\n",
+        "        padding-bottom: .5em;\n",
+        "    }\n",
+        "    .reviewsSubmit {\n",
+        "        align-self: stretch;\n",
+        "        padding: .85em 1em;\n",
+        "    }\n",
+        "    .reviewsList .reviewHead {\n",
+        "        gap: .1em .7em;\n",
+        "    }\n",
+        "    .reviewManage {\n",
+        "        flex-basis: 100%;\n",
+        "        margin-left: 0;\n",
+        "        order: 3;\n",
+        "    }\n",
+        "    .reviewsList .reviewComment {\n",
+        "        font-size: 1.02em;\n",
+        "    }\n",
+        "    .reviewsList .reviewItem.isDirector,\n",
+        "    .reviewItem.isDirector {\n",
+        "        padding-left: 1em;\n",
+        "    }\n",
+        "}\n"
     ].join('');
 
     function injectStyle() {
@@ -222,11 +644,8 @@
             '<div class="reviewsForm">' +
             '  <div class="reviewsFormStars"></div>' +
             '  <div class="reviewsStarsHint">Estrellas y comentario son opcionales: solo hace falta uno de los dos. Vuelve a pulsar la misma puntuación para quitarla.</div>' +
-            '  <div class="reviewsToggle">' +
-            '    <span>Comentar como:</span>' +
-            '    <button type="button" class="reviewsToggleAnon active" data-mode="anon">Anónimo</button>' +
-            '    <button type="button" class="reviewsToggleUser" data-mode="user">Usuario Jellyfin</button>' +
-            '  </div>' +
+            '  <label class="reviewsAnonCheck"><input type="checkbox" class="reviewsAnonInput"><span>Publicar sin mi nombre</span></label>' +
+            '  <div class="reviewsAuthorPreview"></div>' +
             '  <textarea placeholder="Escribe tu opinión sobre este título (opcional si ya has puntuado con estrellas)..."></textarea>' +
             '  <button type="button" class="reviewsSubmit">Publicar reseña</button>' +
             '  <button type="button" class="reviewsCancelEdit" style="display:none;">Cancelar edición</button>' +
@@ -238,26 +657,38 @@
         formStarsHost.innerHTML = starsHtml(0, true);
         var starsEl = makeInteractiveStars(formStarsHost);
 
-        var mode = 'anon';
+        var anonInput = container.querySelector('.reviewsAnonInput');
+        var previewEl = container.querySelector('.reviewsAuthorPreview');
+        var client = apiClient();
+        var loggedIn = !!(client && client.accessToken && client.accessToken());
+        var userName = '';
         var editingId = null;
         var currentReviews = [];
-        var btnAnon = container.querySelector('.reviewsToggleAnon');
-        var btnUser = container.querySelector('.reviewsToggleUser');
-        btnAnon.addEventListener('click', function () {
-            mode = 'anon';
-            btnAnon.classList.add('active');
-            btnUser.classList.remove('active');
-        });
-        btnUser.addEventListener('click', function () {
-            var client = apiClient();
-            if (!client || !client.accessToken || !client.accessToken()) {
-                setStatus(container, 'Necesitas iniciar sesión en Jellyfin para comentar como usuario.');
-                return;
+
+        function refreshPreview() {
+            if (!loggedIn) {
+                previewEl.textContent = 'Inicia sesión en Jellyfin para firmar tus reseñas.';
+            } else if (anonInput.checked) {
+                previewEl.textContent = 'Se publicará como Anónimo.';
+            } else {
+                previewEl.textContent = 'Se publicará como ' + (userName || 'tu usuario') + '.';
             }
-            mode = 'user';
-            btnUser.classList.add('active');
-            btnAnon.classList.remove('active');
-        });
+        }
+        function setAnon(anon) {
+            anonInput.checked = anon;
+            refreshPreview();
+        }
+        if (!loggedIn) {
+            anonInput.checked = true;
+            anonInput.disabled = true;
+        } else if (client.getCurrentUser) {
+            client.getCurrentUser().then(function (u) {
+                userName = (u && u.Name) || '';
+                refreshPreview();
+            }).catch(function () {});
+        }
+        anonInput.addEventListener('change', refreshPreview);
+        refreshPreview();
 
         var textarea = container.querySelector('textarea');
         var submitBtn = container.querySelector('.reviewsSubmit');
@@ -272,9 +703,7 @@
             editingId = null;
             submitBtn.textContent = 'Publicar reseña';
             cancelBtn.style.display = 'none';
-            mode = 'anon';
-            btnAnon.classList.add('active');
-            btnUser.classList.remove('active');
+            setAnon(!loggedIn);
         }
 
         cancelBtn.addEventListener('click', function () {
@@ -331,14 +760,7 @@
             var rating = review.Rating || 0;
             starsEl.setAttribute('data-selected', String(rating));
             setStarsValue(starsEl, rating);
-            mode = review.IsAnonymous ? 'anon' : 'user';
-            if (mode === 'anon') {
-                btnAnon.classList.add('active');
-                btnUser.classList.remove('active');
-            } else {
-                btnUser.classList.add('active');
-                btnAnon.classList.remove('active');
-            }
+            setAnon(review.IsAnonymous || !loggedIn);
             submitBtn.textContent = 'Guardar cambios';
             cancelBtn.style.display = '';
             setStatus(container, 'Editando tu reseña.');
@@ -352,12 +774,11 @@
                 setStatus(container, 'Indica una puntuación, un comentario, o ambos.');
                 return;
             }
-            var client = apiClient();
-            if (!client || !client.accessToken || !client.accessToken()) {
+            if (!loggedIn) {
                 setStatus(container, 'Necesitas iniciar sesión en Jellyfin para publicar una reseña (incluso en modo anónimo, nadie más verá tu nombre).');
                 return;
             }
-            var payload = { Comment: comment, AsAnonymous: mode === 'anon' };
+            var payload = { Comment: comment, AsAnonymous: anonInput.checked };
             if (rating >= 0.5) {
                 payload.Rating = rating;
             }
