@@ -238,7 +238,7 @@
         backdrop.className = 'jellyAskBackdrop';
         applyTheme(backdrop, true);
         backdrop.innerHTML = '' +
-            '<div class="jellyAskModal" role="dialog" aria-modal="true" aria-labelledby="jellyAskTitle" aria-describedby="jellyAskHint">' +
+            '<div class="jellyAskModal focuscontainer" role="dialog" aria-modal="true" aria-labelledby="jellyAskTitle" aria-describedby="jellyAskHint">' +
             '  <h2 id="jellyAskTitle">Pedir película o serie</h2>' +
             '  <p class="hint" id="jellyAskHint">Incluye todos los detalles posibles para que podamos encontrar la película.</p>' +
             '  <label class="jfpSr" for="jellyAskText">Detalles de tu petición</label>' +
