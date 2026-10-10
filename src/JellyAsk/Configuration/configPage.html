@@ -14,7 +14,7 @@
                     </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Telegram Bot Token (opcional)</label>
-                        <input is="emby-input" type="text" id="TelegramBotToken" name="TelegramBotToken" />
+                        <input is="emby-input" type="password" id="TelegramBotToken" name="TelegramBotToken" autocomplete="off" />
                         <div class="fieldDescription">Token obtenido de @BotFather. Déjalo vacío para desactivar el envío por Telegram.</div>
                     </div>
                     <div class="inputContainer">
@@ -40,7 +40,7 @@
                         document.querySelector("#TelegramBotToken").value = config.TelegramBotToken || "";
                         document.querySelector("#TelegramChatId").value = config.TelegramChatId || "";
                         Dashboard.hideLoadingMsg();
-                    });
+                    }).catch(function () { Dashboard.hideLoadingMsg(); });
                 });
 
                 document.querySelector("#JellyAskConfigForm").addEventListener("submit", function (e) {
