@@ -6,9 +6,14 @@ using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.Reviews.Web;
 
+/// <summary>
+/// Adds our script tag to jellyfin-web's index.html while it is served (nothing is written to disk).
+/// The script URL is relative to /web/ so it keeps working when Jellyfin runs under a base URL (e.g. /jellyfin).
+/// </summary>
 public class IndexHtmlInjectionMiddleware
 {
-    private const string ScriptTag = "<script src=\"/Reviews/ClientScript\" defer></script></body>";
+    private const string Marker = "data-plugin=\"Reviews\"";
+    private const string ScriptTag = "<script " + Marker + " src=\"../Reviews/ClientScript\" defer></script>";
 
     private readonly RequestDelegate _next;
 
@@ -19,22 +24,13 @@ public class IndexHtmlInjectionMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var path = context.Request.Path.Value ?? string.Empty;
-        var isIndex = path.Equals("/web/index.html", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("/", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("/web/", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("/index.html", StringComparison.OrdinalIgnoreCase);
-
-        if (!isIndex)
+        if (!IsIndexRequest(context.Request))
         {
             await _next(context).ConfigureAwait(false);
             return;
         }
 
-        // Force an uncompressed, non-conditional response for this single request:
-        // - Accept-Encoding removed so the captured body is plain UTF-8 HTML, not gzip/br.
-        // - If-None-Match / If-Modified-Since removed so StaticFileMiddleware never answers
-        //   304 (which must carry an empty body and would throw when we try to write to it).
+        // A plain, uncompressed, full (non-304) body we can edit.
         context.Request.Headers.Remove("Accept-Encoding");
         context.Request.Headers.Remove("If-None-Match");
         context.Request.Headers.Remove("If-Modified-Since");
@@ -42,7 +38,6 @@ public class IndexHtmlInjectionMiddleware
         var originalBody = context.Response.Body;
         using var buffer = new MemoryStream();
         context.Response.Body = buffer;
-
         try
         {
             await _next(context).ConfigureAwait(false);
@@ -52,24 +47,43 @@ public class IndexHtmlInjectionMiddleware
             context.Response.Body = originalBody;
         }
 
-        if (context.Response.StatusCode is StatusCodes.Status304NotModified or StatusCodes.Status204NoContent
-            || HttpMethods.IsHead(context.Request.Method))
+        var bytes = buffer.ToArray();
+        var contentType = context.Response.ContentType ?? string.Empty;
+        if (context.Response.StatusCode == StatusCodes.Status200OK
+            && contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
         {
-            // No body allowed on the wire for these; nothing to inject.
-            return;
+            var html = Encoding.UTF8.GetString(bytes);
+            var bodyClose = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
+            if (bodyClose >= 0 && !html.Contains(Marker, StringComparison.Ordinal))
+            {
+                bytes = Encoding.UTF8.GetBytes(html.Insert(bodyClose, ScriptTag));
+                context.Response.Headers.Remove("ETag");
+                context.Response.Headers.Remove("Content-Encoding");
+                context.Response.Headers.CacheControl = "no-cache";
+            }
         }
 
-        buffer.Seek(0, SeekOrigin.Begin);
-        var html = await new StreamReader(buffer, Encoding.UTF8).ReadToEndAsync().ConfigureAwait(false);
-
-        if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase) && !html.Contains("/Reviews/ClientScript", StringComparison.Ordinal))
+        if (!context.Response.HasStarted)
         {
-            html = html.Replace("</body>", ScriptTag, StringComparison.OrdinalIgnoreCase);
+            context.Response.ContentLength = bytes.Length;
         }
 
-        var bytes = Encoding.UTF8.GetBytes(html);
-        context.Response.ContentLength = bytes.Length;
-        context.Response.Headers.Remove("Content-Encoding");
-        await context.Response.Body.WriteAsync(bytes).ConfigureAwait(false);
+        if (!HttpMethods.IsHead(context.Request.Method) && bytes.Length > 0)
+        {
+            await originalBody.WriteAsync(bytes, context.RequestAborted).ConfigureAwait(false);
+        }
+    }
+
+    private static bool IsIndexRequest(HttpRequest request)
+    {
+        if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
+        {
+            return false;
+        }
+
+        var path = request.Path.Value ?? string.Empty;
+        return path.EndsWith("/web/", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("/web/index.html", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("/web", StringComparison.OrdinalIgnoreCase);
     }
 }
