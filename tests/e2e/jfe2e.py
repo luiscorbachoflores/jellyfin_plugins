@@ -38,10 +38,11 @@ def sh(cmd, check=True, **kw):
 class Instance:
     """One disposable Jellyfin container: <home>/{config,cache,media}."""
 
-    def __init__(self, name='jf12-audit', port=8101, home=None, image='jellyfin/jellyfin:12'):
+    def __init__(self, name='jf12-audit', port=8101, home=None, image='jellyfin/jellyfin:12', base_path=''):
         self.name, self.port, self.image = name, port, image
         self.home = home or os.path.expanduser('~/' + name)
-        self.base = 'http://localhost:%d' % port
+        self.root = 'http://localhost:%d' % port
+        self.base = self.root + base_path   # e.g. http://localhost:8103/jf when Jellyfin runs under a BaseUrl
 
     # ---------- docker ----------
     def up(self):
@@ -142,9 +143,24 @@ class Instance:
             time.sleep(3)
         raise RuntimeError('wizard failed')
 
-    def seed(self):
-        """Libraries + user. Media must already exist under <home>/media (see make_media)."""
+    def configure_base_url(self, path):
+        """Run Jellyfin under a sub-path (BaseUrl) the way a reverse proxy at https://host/jf would; restarts the server."""
         tok, _ = self.login(ADMIN, ADMIN_PW, 'admin')
+        st, net = self.call('GET', '/System/Configuration/network', token=tok)
+        net['BaseUrl'] = path
+        assert self.call('POST', '/System/Configuration/network', net, token=tok)[0] == 204
+        sh('docker restart %s' % self.name)
+        time.sleep(3)
+        self.base = self.root + path   # from now on everything lives under the sub-path
+        self.wait()
+
+    def seed(self, empty=False):
+        """Libraries + user. Media must already exist under <home>/media (see make_media). empty=True: no libraries at all."""
+        tok, _ = self.login(ADMIN, ADMIN_PW, 'admin')
+        if empty:
+            if not any(u['Name'] == USER for u in self.call('GET', '/Users', token=tok)[1]):
+                self.call('POST', '/Users/New', {'Name': USER, 'Password': USER_PW}, token=tok)
+            return 0
         if not self.call('GET', '/Library/VirtualFolders', token=tok)[1]:
             for name, ctype, path in (('Peliculas', 'movies', '/media/Movies'), ('Series', 'tvshows', '/media/Shows')):
                 q = urllib.parse.urlencode({'name': name, 'collectionType': ctype, 'paths': path, 'refreshLibrary': 'true'})

@@ -16,21 +16,25 @@ PROFILES = {
 }
 # Noise that is not ours (favicon, source maps, 404 of optional resources...). Anything else is reported.
 # The websocket 403 right after ApiClient login is a Jellyfin 12.2 core race (socket opened before the session is stored).
-IGNORE = [r"WebSocket connection to .* 403", r'favicon', r'manifest\.json', r'\.map\b', r'Failed to load resource.*(404|401)',
+# jellyfin-web 10.11 requests /web/null and shows a notification without permission in headless Chromium: core noise.
+IGNORE = [r"/web/null", r"showNotification", r"WebSocket connection to .* 403", r'favicon', r'manifest\.json', r'\.map\b', r'Failed to load resource.*(404|401)',
           r'Download the React DevTools', r'ServiceWorker', r'sw\.js']
 
 
 class Session:
     """One browser page for a user/profile. `errors` collects console errors/warnings, page errors and failed requests."""
 
-    def __init__(self, pw, inst, profile='desktop', user=USER, password=USER_PW, shots=None, tag=''):
+    def __init__(self, pw, inst, profile='desktop', user=USER, password=USER_PW, shots=None, tag='', tv=False):
         self.inst, self.shots, self.tag, self.profile = inst, shots, tag, profile
         self.browser = pw.chromium.launch()
         self.ctx = self.browser.new_context(**PROFILES[profile])
+        if tv:
+            # jellyfin-web reads its layout from localStorage ('tv' -> <html class="layout-tv">)
+            self.ctx.add_init_script("localStorage.setItem('layout','tv')")
         self.page = self.ctx.new_page()
         self.errors, self.console_all = [], []
         self.page.on('console', self._console)
-        self.page.on('pageerror', lambda e: self.errors.append('PAGEERROR ' + str(e)[:300]))
+        self.page.on('pageerror', self._pageerror)
         self.page.on('response', self._response)
         self.user, self.password = user, password
 
@@ -38,6 +42,11 @@ class Session:
         txt = '%s: %s' % (m.type, m.text[:300])
         self.console_all.append(txt)
         if m.type in ('error', 'warning') and not any(re.search(p, txt) for p in IGNORE):
+            self.errors.append(txt)
+
+    def _pageerror(self, e):
+        txt = 'PAGEERROR ' + str(e)[:300]
+        if not any(re.search(p, txt) for p in IGNORE):
             self.errors.append(txt)
 
     def _response(self, r):
