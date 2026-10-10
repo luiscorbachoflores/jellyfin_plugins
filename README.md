@@ -1,6 +1,6 @@
 # Plugins de Jellyfin — luiscorbachoflores
 
-Cuatro plugins independientes para Jellyfin (.NET 9 / `Jellyfin.Controller` 10.11.x; Language Badges y Search Notifier también compilan para Jellyfin 12.x / .NET 10). Los que llevan interfaz inyectan su propio script en `index.html` mediante un middleware ASP.NET Core en tiempo de respuesta — **sin modificar ningún fichero de jellyfin-web**.
+Cinco plugins independientes para Jellyfin (.NET 9 / `Jellyfin.Controller` 10.11.x; Language Badges y Search Notifier también compilan para Jellyfin 12.x / .NET 10; Recomendación Semanal solo para Jellyfin 12.2 / .NET 10). Los que llevan interfaz inyectan su propio script en `index.html` mediante un middleware ASP.NET Core en tiempo de respuesta — **sin modificar ningún fichero de jellyfin-web**.
 
 ## Instalación (repositorio de plugins)
 
@@ -10,7 +10,7 @@ En Jellyfin, ve a **Panel de control → Complementos → Repositorios** y añad
 https://github.com/luiscorbachoflores/jellyfin_plugins/raw/main/manifest.json
 ```
 
-Instala **Reviews**, **JellyAsk**, **Language Badges** y/o **Search Notifier** desde el catálogo de complementos y reinicia Jellyfin.
+Instala **Reviews**, **JellyAsk**, **Language Badges**, **Search Notifier** y/o **Recomendación Semanal** desde el catálogo de complementos y reinicia Jellyfin.
 
 ## Reviews
 
@@ -23,10 +23,11 @@ Código en [`src/Reviews`](src/Reviews).
 
 ## JellyAsk
 
-Añade una entrada **"Pedir película"** al menú de navegación (justo encima de Ajustes). Abre un formulario con un único campo de texto libre ("Incluye todos los detalles posibles para que podamos encontrar la película"); al enviarlo, registra la petición en el **Activity Log nativo de Jellyfin** (Panel de control → Actividad), visible para cualquier plugin de notificaciones (p. ej. un notificador de Telegram) que escuche esos eventos.
+Añade un **botón flotante "Pedir película"** (ya no un enlace en el cajón lateral, que en el cliente web 12.x dejó de ser visible). Abre un formulario con un único campo de texto libre ("Incluye todos los detalles posibles para que podamos encontrar la película"); al enviarlo, registra la petición en el **Activity Log nativo de Jellyfin** (Panel de control → Actividad), visible para cualquier plugin de notificaciones (p. ej. un notificador de Telegram) que escuche esos eventos.
 
 - Requiere sesión Jellyfin válida (no admite modo anónimo).
 - API REST propia (`POST /JellyAsk/Request`).
+- En Jellyfin 12.x la cabecera `X-Emby-Token` está retirada: el plugin envía `Authorization: MediaBrowser Token="..."` (desde la 1.2.1.0). Cualquier script propio o plugin (p. ej. Reviews) que llame a la API de Jellyfin debe usar esa cabecera en 12.x.
 
 Código en [`src/JellyAsk`](src/JellyAsk).
 
@@ -56,6 +57,16 @@ Avisa al admin cuando un usuario busca algo. Detecta cualquier petición con `se
 - Privacidad: se registran las búsquedas de los usuarios; conviene avisarles.
 
 Código en [`src/SearchNotifier`](src/SearchNotifier).
+
+## Recomendación Semanal (WeeklyPick)
+
+Muestra un aviso emergente, una vez por semana (la semana se reinicia los viernes), con una recomendación personal del dueño de la filmoteca. Se configura desde su página en el panel de plugins.
+
+- Solo para **Jellyfin 12.2** (.NET 10, `Jellyfin.Controller` 12.2.0, targetAbi `12.2.0.0`).
+- Instalación: descarga `Jellyfin.Plugin.WeeklyPick.zip` de la [release](https://github.com/luiscorbachoflores/jellyfin_plugins/releases/tag/weeklypick-v1.1.0.0) y descomprímelo en la carpeta `plugins/` de Jellyfin (o añade `manifest-staging.json`, en vez de `manifest.json`, como repositorio), y reinicia Jellyfin.
+- El script cliente usa `Authorization: MediaBrowser Token="..."`.
+
+Código en [`src/WeeklyPick`](src/WeeklyPick).
 
 ## Desarrollo
 

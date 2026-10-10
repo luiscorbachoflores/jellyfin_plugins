@@ -85,7 +85,7 @@
             statusEl.textContent = 'Enviando...';
             fetch('/JellyAsk/Request', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Emby-Token': token },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'MediaBrowser Token="' + token + '"' },
                 body: JSON.stringify({ Text: text })
             }).then(function (r) {
                 if (!r.ok) {
