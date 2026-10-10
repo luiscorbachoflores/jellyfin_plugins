@@ -84,11 +84,19 @@
     {
         "guid": "c3f4a9e2-8d1b-4f6a-9e3c-7a2b5d6e8f10",
         "name": "JellyAsk",
-        "description": "Permite a los usuarios pedir películas o series desde el menú, avisando en el registro de actividad de Jellyfin y, opcionalmente, por Telegram.",
-        "overview": "Añade una entrada al menú de navegación con un formulario de petición de títulos, registrado en el Activity Log nativo, con envío opcional a un bot de Telegram.",
+        "description": "Permite a los usuarios pedir películas o series desde un botón flotante, avisando en el registro de actividad de Jellyfin y, opcionalmente, por Telegram.",
+        "overview": "Añade un botón flotante con un formulario de petición de títulos, registrado en el Activity Log nativo, con envío opcional a un bot de Telegram.",
         "owner": "luiscorbachoflores",
         "category": "General",
         "versions": [
+            {
+                "version": "1.2.0.0",
+                "changelog": "Boton flotante fijo en vez de un enlace dentro del cajon lateral clasico: esa superficie ya no es donde los usuarios llegan a Ajustes en el cliente web 12.x (ahora es un menu aparte, colgado del avatar), asi que el enlace antiguo quedaba invisible en la practica. El boton flotante no depende de la estructura interna de ningun menu de Jellyfin.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.2.0.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "816d90116e877570d82a6fe269bab1e9",
+                "timestamp": "2026-10-10T23:05:00Z"
+            },
             {
                 "version": "1.1.2.0",
                 "changelog": "Corrige que el ensamblado siempre reportaba version 0.0.0.0 en el panel de plugins (Plugin.cs no sobrescribia Version y el .csproj no fijaba AssemblyVersion), lo que podia hacer que Jellyfin considerase el plugin desactualizado de forma permanente. Sin cambios funcionales.",
