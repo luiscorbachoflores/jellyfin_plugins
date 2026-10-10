@@ -513,6 +513,35 @@ def test_theming(inst, pw, shots, ctx):
         inst.call('POST', '/System/Configuration/branding', br, token=atok)
 
 
+# --------------------------------------------------------------------------------------------- TV layout
+def test_tv(inst, pw, shots, ctx):
+    P = 'TV'
+    atok, it = ctx['admin_tok'], ctx['items']
+    today = datetime.date.today().isoformat()
+    inst.call('POST', '/Plugins/%s/Configuration' % guid('WeeklyPick'), {'Enabled': True, 'Entries': [{'WeekStart': today, 'Text': 'Aviso en TV', 'ItemId': it['m1'][0]}]}, token=atok)
+    inst.call('POST', '/WeeklyPick/Reset', token=atok)
+    s = browser.Session(pw, inst, 'desktop', shots=shots, tag='tv', tv=True).login()
+    try:
+        chk(P, 'layout-tv activo', 'layout-tv' in s.js('document.documentElement.className'))
+        s.settle(2000)
+        chk(P, 'WeeklyPick: aviso enfocable con el mando (foco en un boton del dialogo)', s.js("!!(document.activeElement && document.activeElement.closest('.wpBackdrop'))"))
+        s.shot('weeklypick')
+        s.page.keyboard.press('Enter')   # remote OK on the focused button
+        s.settle(1500)
+        s.nav('#/home', 2000)
+        chk(P, 'JellyAsk: el boton flotante no aparece en TV', not s.visible('.jellyAskFab'))
+        s.shot('home')
+        s.nav('#/details?id=' + it['m1'][0], 3500)
+        chk(P, 'Reviews: lista de resenas presente en TV', s.count('.itemDetailPage:not(.hide) .reviewsWidget .reviewsList') == 1)
+        chk(P, 'Reviews: sin formulario en TV (solo lectura)', s.count('.itemDetailPage:not(.hide) .reviewsWidget .reviewsForm') == 0)
+        chk(P, 'LanguageBadges: fila de idiomas en TV', s.count('.itemDetailPage:not(.hide) .lb-detail') == 1)
+        s.shot('movie')
+        no_errors(P, s, 'tv')
+    finally:
+        s.close()
+        inst.call('POST', '/Plugins/%s/Configuration' % guid('WeeklyPick'), {'Enabled': False, 'Entries': []}, token=atok)
+
+
 # --------------------------------------------------------------------------------------------- config pages
 def test_config_pages(inst, pw, shots, ctx):
     P = 'ConfigPages'
@@ -539,14 +568,49 @@ TESTS = {
     'SearchNotifier': test_search,
     'WeeklyPick': test_weeklypick,
     'Tema': test_theming,
+    'TV': test_tv,
     'ConfigPages': test_config_pages,
 }
+
+
+def run_empty(inst, shots):
+    """New server, no libraries: every plugin must stay silent (no widgets, no errors) and the API must answer sanely."""
+    P = 'Vacio'
+    tok, uid = inst.login(USER, USER_PW, 'ana')
+    atok, _ = inst.login(ADMIN, ADMIN_PW, 'admin')
+    chk(P, 'LanguageBadges: lista vacia -> {}', inst.call('GET', '/LanguageBadges/Items?ids=abc', token=tok) == (200, {}))
+    chk(P, 'Reviews: GET de elemento inexistente -> 200 vacio', inst.call('GET', '/Reviews/' + '0' * 31 + '1')[0] == 200)
+    chk(P, 'Reviews: POST a elemento inexistente -> 404', inst.call('POST', '/Reviews/' + '0' * 31 + '1', {'Rating': 3}, token=tok)[0] == 404)
+    chk(P, 'SearchNotifier: registro vacio', inst.call('GET', '/SearchNotifier/Log', token=atok) == (200, []))
+    chk(P, 'WeeklyPick: sin entradas -> Show=false', inst.call('GET', '/WeeklyPick/Current', token=tok)[1].get('Show') is False)
+    with sync_playwright() as pw:
+        for prof in ('desktop', 'mobile'):
+            s = browser.Session(pw, inst, prof, shots=shots, tag='vacio').login()
+            try:
+                s.settle(2500)
+                s.shot('home')
+                chk(P, 'inicio sin bibliotecas: sin chips ni widgets (%s)' % prof, s.count('.lb-badges') == 0 and s.count('.reviewsWidget') == 0)
+                s.nav('#/search', 2500)
+                s.page.fill('.searchFields input, input[type=search], #searchTextInput', 'nada')
+                s.settle(3000)
+                chk(P, 'busqueda sin resultados no rompe nada (%s)' % prof, True)
+                no_errors(P, s, prof)
+                s.nav('#/details?id=' + '0' * 31 + '1', 3000)   # item that does not exist: the web client itself logs 404s here
+                s.errors.clear()
+                chk(P, 'ficha de elemento inexistente: sin widget ni excepciones propias (%s)' % prof, s.count('.reviewsWidget') == 0)
+            finally:
+                s.close()
+    fails = [r for r in RESULTS if r[2] == 'FAIL']
+    print('\nRESUMEN: %d PASS, %d FAIL' % (sum(1 for r in RESULTS if r[2] == 'PASS'), len(fails)))
+    return len(fails)
 
 
 def run(inst, shots, only=()):
     ctx = {}
     ctx['admin_tok'], _ = inst.login(ADMIN, ADMIN_PW, 'admin')
     ctx['user_tok'], ctx['uid'] = inst.login(USER, USER_PW, 'ana')
+    if only == ['Vacio']:
+        return run_empty(inst, shots)
     ctx['items'] = browser.items(inst)
     for key in PLUGINS:
         p = plugin_state(inst, ctx['admin_tok'], key)

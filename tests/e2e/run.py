@@ -21,14 +21,17 @@ def main():
     ap.add_argument('--plugins', default=os.path.join(ROOT, 'out', '12.2.0'), help='dir produced by scripts/build.py')
     ap.add_argument('--shots', default=os.path.join(ROOT, 'out', 'shots'))
     ap.add_argument('--only', default='')
+    ap.add_argument('--base-path', default='', help='run Jellyfin under this BaseUrl (e.g. /jf) to test reverse-proxy sub-paths')
+    ap.add_argument('--empty', action='store_true', help='no libraries/media (new-server scenario); use with --only Vacio')
     ap.add_argument('--keep', action='store_true', help='with "all": do not tear down')
     a = ap.parse_args()
-    inst = Instance(a.name, a.port, image=a.image)
+    inst = Instance(a.name, a.port, image=a.image, base_path=a.base_path if a.cmd == 'test' else '')
     only = [x for x in a.only.split(',') if x]
 
     if a.cmd in ('up', 'all'):
         inst.down()
-        inst.make_media()
+        if not a.empty:
+            inst.make_media()
         inst.up()
         inst.wizard()
         inst.clear_plugins()
@@ -36,7 +39,9 @@ def main():
             if os.path.isdir(d):
                 inst.install(d, os.path.basename(d))
         inst.restart()
-        print('items scanned:', inst.seed())
+        if a.base_path:
+            inst.configure_base_url(a.base_path)
+        print('items scanned:', inst.seed(empty=a.empty))
     if a.cmd == 'restart':
         inst.restart()
     if a.cmd in ('test', 'all'):
