@@ -25,6 +25,8 @@ public class SessionNotifier : IHostedService
         _logger = logger;
     }
 
+    private readonly CancellationTokenSource _stopping = new();
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _sessionManager.SessionStarted += OnSessionStarted;
@@ -34,6 +36,7 @@ public class SessionNotifier : IHostedService
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _sessionManager.SessionStarted -= OnSessionStarted;
+        _stopping.Cancel();
         return Task.CompletedTask;
     }
 
@@ -92,14 +95,18 @@ public class SessionNotifier : IHostedService
                         session.Id,
                         session.Id,
                         new MessageCommand { Header = "Recomendación de la semana", Text = entry.Text, TimeoutMs = 20000 },
-                        CancellationToken.None).ConfigureAwait(false);
+                        _stopping.Token).ConfigureAwait(false);
                     sent = true;
                 }
                 else
                 {
-                    await Task.Delay(2000).ConfigureAwait(false);
+                    await Task.Delay(2000, _stopping.Token).ConfigureAwait(false);
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Servidor parandose.
         }
         catch (Exception ex)
         {

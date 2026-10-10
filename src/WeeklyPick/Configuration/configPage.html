@@ -66,6 +66,10 @@
                     return d.getFullYear() + "-" + mm + "-" + dd;
                 }
 
+                function esc(v) {
+                    return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                }
+
                 function render() {
                     var list = document.querySelector("#EntriesList");
                     entries.sort(function (a, b) { return a.WeekStart < b.WeekStart ? -1 : 1; });
@@ -74,9 +78,9 @@
                         return;
                     }
                     list.innerHTML = entries.map(function (e, i) {
-                        return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(255,255,255,.1)\">" +
-                            "<strong style=\"min-width:7em\">" + e.WeekStart + "</strong>" +
-                            "<span style=\"flex:1\">" + e.Text.replace(/</g, "&lt;") + (e.ItemId ? " <em>(con ficha)</em>" : "") + "</span>" +
+                        return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(128,128,128,.3)\">" +
+                            "<strong style=\"min-width:7em\">" + esc(e.WeekStart) + "</strong>" +
+                            "<span style=\"flex:1\">" + esc(e.Text) + (e.ItemId ? " <em>(con ficha)</em>" : "") + "</span>" +
                             "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-idx=\"" + i + "\">Borrar</button>" +
                             "</div>";
                     }).join("");
@@ -95,7 +99,7 @@
                         entries = (config.Entries || []).slice();
                         render();
                         Dashboard.hideLoadingMsg();
-                    });
+                    }).catch(function () { Dashboard.hideLoadingMsg(); });
                 });
 
                 document.querySelector("#BtnAdd").addEventListener("click", function () {
@@ -104,6 +108,10 @@
                     var itemId = document.querySelector("#NewItemId").value.trim();
                     if (!week || !text) {
                         Dashboard.alert("Rellena al menos la semana y el texto.");
+                        return;
+                    }
+                    if (itemId && !/^[0-9a-fA-F-]{32,36}$/.test(itemId)) {
+                        Dashboard.alert("El id de la película/serie no es válido (32 caracteres hexadecimales, como en la URL de la ficha).");
                         return;
                     }
                     entries.push({ WeekStart: fridayOf(week), Text: text, ItemId: itemId });

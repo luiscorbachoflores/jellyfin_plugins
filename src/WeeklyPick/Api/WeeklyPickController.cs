@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,15 +11,12 @@ namespace Jellyfin.Plugin.WeeklyPick.Api;
 
 [ApiController]
 [Route("WeeklyPick")]
-[AllowAnonymous]
 public class WeeklyPickController : ControllerBase
 {
-    private readonly IAuthorizationContext _authorizationContext;
     private readonly SeenStore _store;
 
-    public WeeklyPickController(IAuthorizationContext authorizationContext, SeenStore store)
+    public WeeklyPickController(SeenStore store)
     {
-        _authorizationContext = authorizationContext;
         _store = store;
     }
 
@@ -38,7 +37,7 @@ public class WeeklyPickController : ControllerBase
 
     internal static string NormalizeToWeekKey(string anyDateInWeek)
     {
-        if (!DateTime.TryParse(anyDateInWeek, out var d))
+        if (!DateTime.TryParse(anyDateInWeek, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
         {
             return string.Empty;
         }
@@ -46,28 +45,31 @@ public class WeeklyPickController : ControllerBase
         return CurrentWeekKey(d);
     }
 
+    /// <summary>El script que se inyecta en index.html. Publico a proposito: no contiene datos.</summary>
     [HttpGet("ClientScript")]
-    public ActionResult GetClientScript()
+    [AllowAnonymous]
+    public async Task<ActionResult> GetClientScript(CancellationToken cancellationToken)
     {
         var assembly = typeof(WeeklyPickController).Assembly;
-        using var stream = assembly.GetManifestResourceStream("Jellyfin.Plugin.WeeklyPick.wwwroot.weeklypick.js");
+        await using var stream = assembly.GetManifestResourceStream("Jellyfin.Plugin.WeeklyPick.wwwroot.weeklypick.js");
         if (stream is null)
         {
             return NotFound();
         }
 
-        using var reader = new System.IO.StreamReader(stream);
-        var content = reader.ReadToEnd();
-        Response.Headers.CacheControl = "no-store, must-revalidate";
-        Response.Headers.Pragma = "no-cache";
-        return Content(content, "application/javascript");
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        Response.Headers.CacheControl = "no-cache";
+        return Content(content, "application/javascript; charset=utf-8");
     }
 
+    /// <summary>La recomendacion de esta semana si el usuario aun no la ha visto. No la marca como vista:
+    /// eso lo hace el cliente con <c>POST Seen</c> cuando de verdad la ha mostrado.</summary>
     [HttpGet("Current")]
-    public async Task<ActionResult<WeeklyPickResponseDto>> GetCurrent()
+    [Authorize]
+    public ActionResult<WeeklyPickResponseDto> GetCurrent()
     {
-        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
-        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        if (!TryGetUserKey(out var userId))
         {
             return Unauthorized();
         }
@@ -80,18 +82,10 @@ public class WeeklyPickController : ControllerBase
 
         var weekKey = CurrentWeekKey(DateTime.Now);
         var entry = EntryFor(config, weekKey);
-        if (entry is null || string.IsNullOrWhiteSpace(entry.Text))
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Text) || _store.WasNotifiedThisWeek(userId, weekKey))
         {
             return Ok(new WeeklyPickResponseDto { Show = false });
         }
-
-        var userId = authInfo.UserId.ToString("N");
-        if (_store.WasNotifiedThisWeek(userId, weekKey))
-        {
-            return Ok(new WeeklyPickResponseDto { Show = false });
-        }
-
-        _store.MarkNotified(userId, weekKey);
 
         return Ok(new WeeklyPickResponseDto
         {
@@ -101,19 +95,39 @@ public class WeeklyPickController : ControllerBase
         });
     }
 
-    [HttpPost("Reset")]
-    public async Task<ActionResult> PostReset()
+    /// <summary>El cliente web avisa de que ya ha mostrado la recomendacion de esta semana.</summary>
+    [HttpPost("Seen")]
+    [Authorize]
+    public ActionResult PostSeen()
     {
-        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
-        var isAdmin = authInfo.IsApiKey
-            || (authInfo.User is not null && authInfo.User.Permissions.Any(p => p.Kind == Jellyfin.Database.Implementations.Enums.PermissionKind.IsAdministrator && p.Value));
-        if (!authInfo.IsAuthenticated || !isAdmin)
+        if (!TryGetUserKey(out var userId))
         {
             return Unauthorized();
         }
 
+        _store.MarkNotified(userId, CurrentWeekKey(DateTime.Now));
+        return NoContent();
+    }
+
+    /// <summary>Solo administradores: olvida quien ha visto ya la recomendacion de esta semana.</summary>
+    [HttpPost("Reset")]
+    [Authorize(Policy = "RequiresElevation")]
+    public ActionResult PostReset()
+    {
         _store.Clear();
         return Ok();
+    }
+
+    private bool TryGetUserKey(out string userId)
+    {
+        userId = string.Empty;
+        if (Guid.TryParse(User.FindFirst("Jellyfin-UserId")?.Value, out var id) && id != Guid.Empty)
+        {
+            userId = id.ToString("N");
+            return true;
+        }
+
+        return false;
     }
 }
 

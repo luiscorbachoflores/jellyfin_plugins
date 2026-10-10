@@ -1,10 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">10.11.8</JellyfinVersion>
+    <TargetFramework Condition="$(JellyfinVersion.StartsWith('10.'))">net9.0</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.WeeklyPick</RootNamespace>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.1.0.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -13,8 +16,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Jellyfin.Controller" Version="12.2.0" ExcludeAssets="runtime" />
-    <PackageReference Include="Jellyfin.Model" Version="12.2.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
