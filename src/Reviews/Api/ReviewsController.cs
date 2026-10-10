@@ -133,7 +133,17 @@ public class ReviewsController : ControllerBase
         }
 
         // The item must exist, be a reviewable type and be visible to this user (parental controls / library access).
-        var item = _libraryManager.GetItemById(Guid.Parse(ids[0]));
+        BaseItem? item;
+        try
+        {
+            item = _libraryManager.GetItemById(Guid.Parse(ids[0]));
+        }
+        catch (InvalidOperationException)
+        {
+            // Jellyfin 10.11 throws for placeholder rows it cannot deserialize (e.g. 000...001): treat as "not found".
+            item = null;
+        }
+
         var user = _userManager.GetUserById(userGuid);
         if (item is null || user is null || !item.IsVisible(user))
         {
