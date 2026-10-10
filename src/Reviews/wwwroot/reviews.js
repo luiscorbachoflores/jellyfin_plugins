@@ -243,13 +243,13 @@
         var client = apiClient();
         var token = client && typeof client.accessToken === 'function' ? client.accessToken() : null;
         if (token) {
-            headers['X-Emby-Token'] = token;
+            headers['Authorization'] = 'MediaBrowser Token="' + token + '"';
         }
         return headers;
     }
 
     function fetchReviews(itemId) {
-        return fetch('/Reviews/' + encodeURIComponent(itemId)).then(function (r) {
+        return fetch('/Reviews/' + encodeURIComponent(itemId), { headers: authHeaders() }).then(function (r) {
             if (!r.ok) {
                 throw new Error('HTTP ' + r.status);
             }
