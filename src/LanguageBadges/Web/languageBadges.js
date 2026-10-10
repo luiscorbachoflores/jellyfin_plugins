@@ -61,7 +61,7 @@
         s.id = 'lb-styles';
         s.textContent = [
             '.lb-badges{position:absolute;left:.35em;bottom:.35em;z-index:3;display:flex;flex-wrap:wrap;gap:.2em;max-width:calc(100% - .7em);pointer-events:none}',
-            '.lb-chip{font:700 .72em/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;padding:.05em .4em;border-radius:.3em;',
+            '.lb-chip{font:inherit;font-weight:700;font-size:.72em;line-height:1.35;letter-spacing:.03em;padding:.05em .4em;border-radius:.3em;',
             '  background:rgba(12,12,12,.86);color:#fff;border:1px solid rgba(255,255,255,.35);white-space:nowrap;text-shadow:none}',
             '.lb-chip.lb-hl{background:#ffb300;color:#111;border-color:#ffb300}',
             '.lb-chip.lb-sub{background:rgba(12,12,12,.72);color:#e8e8e8;border-style:dashed;font-weight:600}',
@@ -104,15 +104,19 @@
                 .slice(0, 2)
                 .forEach(function (c) { box.appendChild(chip('sub ' + c, 'lb-sub')); });
         }
-        box.title = 'Audio: ' + (audio.join(', ') || '-') +
-            (langs.Subtitles && langs.Subtitles.length ? ' | Subtitulos: ' + langs.Subtitles.join(', ') : '');
+        var label = 'Audio: ' + (audio.join(', ') || '-') +
+            (langs.Subtitles && langs.Subtitles.length ? ' | Subtítulos: ' + langs.Subtitles.join(', ') : '');
+        box.title = label;
+        box.setAttribute('role', 'img');
+        box.setAttribute('aria-label', label);
         return box.childNodes.length > 0;
     }
 
     function paintCard(el, id, langs) {
         var old = el.querySelector(':scope .lb-badges');
         if (old) { old.remove(); }
-        if (!langs) { return; }
+        el.removeAttribute('data-lb-empty');
+        if (!langs) { el.setAttribute('data-lb-empty', '1'); return; }
         var isList = el.classList.contains('listItem');
         var host = isList
             ? el.querySelector('.listItemBody .listItemBodyText') || el.querySelector('.listItemBody')
@@ -120,7 +124,7 @@
         if (!host) { return; }
         var box = document.createElement(isList ? 'span' : 'div');
         box.className = 'lb-badges' + (isList ? ' lb-inline' : '');
-        if (buildCompact(langs, box)) { host.appendChild(box); }
+        if (buildCompact(langs, box)) { host.appendChild(box); } else { el.setAttribute('data-lb-empty', '1'); }
     }
 
     function paintDetail(page, id, langs) {
@@ -131,7 +135,7 @@
         var anchor = page.querySelector('.itemMiscInfo-primary') ||
             page.querySelector('.itemMiscInfo') ||
             page.querySelector('.nameContainer');
-        if (!anchor) { return; }
+        if (!anchor || !anchor.parentNode) { return; }
         var row = document.createElement('div');
         row.className = 'lb-detail';
         row.setAttribute('data-lb-id', id);
@@ -144,7 +148,7 @@
         audio.forEach(function (c) { row.appendChild(chip(c)); });
         if (cfg.subs && (langs.Subtitles || []).length) {
             var sep = document.createElement('span'); sep.className = 'lb-sep'; row.appendChild(sep);
-            var l2 = document.createElement('span'); l2.className = 'lb-label'; l2.textContent = 'Subtitulos:';
+            var l2 = document.createElement('span'); l2.className = 'lb-label'; l2.textContent = 'Subtítulos:';
             row.appendChild(l2);
             sortCodes(langs.Subtitles).forEach(function (c) { row.appendChild(chip(c, 'lb-sub')); });
         }
@@ -195,8 +199,10 @@
                 var el = els[i];
                 if (!TYPES[el.getAttribute('data-type')]) { continue; }
                 var id = el.getAttribute('data-id');
-                // Cards get recycled by virtual scrolling: repaint when the id changed.
-                if (el.getAttribute('data-lb-id') === id) { continue; }
+                // Cards get recycled by virtual scrolling and re-rendered by the client: repaint when the id changed
+                // or when our chips were wiped from a card that should have them.
+                if (el.getAttribute('data-lb-id') === id &&
+                    (el.getAttribute('data-lb-empty') === '1' || el.querySelector(':scope .lb-badges'))) { continue; }
                 var e = cached(id);
                 if (e) {
                     paintCard(el, id, e.v);

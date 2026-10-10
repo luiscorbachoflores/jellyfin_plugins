@@ -53,7 +53,7 @@
                         bools.forEach(function (k) { page.querySelector('#' + k).checked = !!config[k]; });
                         texts.forEach(function (k) { page.querySelector('#' + k).value = config[k]; });
                         Dashboard.hideLoadingMsg();
-                    });
+                    }).catch(function () { Dashboard.hideLoadingMsg(); });
                 });
 
                 page.querySelector('#LanguageBadgesConfigForm').addEventListener('submit', function (e) {
