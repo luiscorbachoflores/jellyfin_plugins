@@ -156,14 +156,17 @@ public class SearchTracker : IDisposable
 
     public void Dispose()
     {
+        List<Pending> remaining;
         lock (_lock)
         {
-            foreach (var p in _pending.Values)
-            {
-                p.Timer?.Dispose();
-            }
-
+            remaining = _pending.Values.ToList();
             _pending.Clear();
+        }
+
+        // Searches still waiting for their quiet period when the server stops are saved, not lost.
+        foreach (var p in remaining)
+        {
+            Flush(p);
         }
 
         GC.SuppressFinalize(this);

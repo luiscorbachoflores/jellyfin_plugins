@@ -81,12 +81,16 @@ public class SearchDetectionMiddleware
         {
             await _next(context).ConfigureAwait(false);
         }
-        finally
+        catch
         {
+            // Let Jellyfin's own error handling answer; never write a half-buffered body.
             context.Response.Body = originalBody;
-            buffer.Position = 0;
-            await buffer.CopyToAsync(originalBody).ConfigureAwait(false);
+            throw;
         }
+
+        context.Response.Body = originalBody;
+        buffer.Position = 0;
+        await buffer.CopyToAsync(originalBody, context.RequestAborted).ConfigureAwait(false);
 
         try
         {

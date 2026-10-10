@@ -113,7 +113,7 @@
                         bools.forEach(function (k) { page.querySelector('#' + k).checked = !!config[k]; });
                         texts.concat(nums).forEach(function (k) { page.querySelector('#' + k).value = config[k] == null ? '' : config[k]; });
                         Dashboard.hideLoadingMsg();
-                    });
+                    }).catch(function () { Dashboard.hideLoadingMsg(); });
                     loadLog();
                 });
 
