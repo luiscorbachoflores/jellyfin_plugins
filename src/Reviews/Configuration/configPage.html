@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reviews</title>
+</head>
+<body>
+    <div id="ReviewsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="ReviewsConfigForm">
+                    <div class="verticalSection">
+                        <h2>Reviews</h2>
+                        <p>Todas las reseñas requieren sesión Jellyfin (incluso las publicadas como anónimas: el nombre real solo lo ve un administrador). Opcionalmente, puedes recibir un aviso por Telegram cada vez que se publique una reseña nueva.</p>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Telegram Bot Token (opcional)</label>
+                        <input is="emby-input" type="text" id="TelegramBotToken" name="TelegramBotToken" />
+                        <div class="fieldDescription">Token obtenido de @BotFather. Déjalo vacío para desactivar el envío por Telegram.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="TelegramChatId">Telegram Chat ID (opcional)</label>
+                        <input is="emby-input" type="text" id="TelegramChatId" name="TelegramChatId" />
+                        <div class="fieldDescription">ID del chat o canal donde se enviarán los avisos de nuevas reseñas.</div>
+                    </div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Guardar</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = "b7e1b6b4-6b1a-4a1a-9c1a-6f0b1e9c2d31";
+
+                document.querySelector("#ReviewsConfigPage").addEventListener("pageshow", function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        document.querySelector("#TelegramBotToken").value = config.TelegramBotToken || "";
+                        document.querySelector("#TelegramChatId").value = config.TelegramChatId || "";
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+                document.querySelector("#ReviewsConfigForm").addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.TelegramBotToken = document.querySelector("#TelegramBotToken").value.trim();
+                        config.TelegramChatId = document.querySelector("#TelegramChatId").value.trim();
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

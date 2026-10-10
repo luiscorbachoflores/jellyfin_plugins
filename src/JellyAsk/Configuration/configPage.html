@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JellyAsk</title>
+</head>
+<body>
+    <div id="JellyAskConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="JellyAskConfigForm">
+                    <div class="verticalSection">
+                        <h2>JellyAsk</h2>
+                        <p>Las peticiones de los usuarios siempre se registran en el Panel de control &rarr; Actividad. Opcionalmente, puedes configurar aquí un bot de Telegram para recibir además un aviso instantáneo.</p>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Telegram Bot Token (opcional)</label>
+                        <input is="emby-input" type="text" id="TelegramBotToken" name="TelegramBotToken" />
+                        <div class="fieldDescription">Token obtenido de @BotFather. Déjalo vacío para desactivar el envío por Telegram.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="TelegramChatId">Telegram Chat ID (opcional)</label>
+                        <input is="emby-input" type="text" id="TelegramChatId" name="TelegramChatId" />
+                        <div class="fieldDescription">ID del chat o canal donde se enviarán las peticiones.</div>
+                    </div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Guardar</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = "c3f4a9e2-8d1b-4f6a-9e3c-7a2b5d6e8f10";
+
+                document.querySelector("#JellyAskConfigPage").addEventListener("pageshow", function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        document.querySelector("#TelegramBotToken").value = config.TelegramBotToken || "";
+                        document.querySelector("#TelegramChatId").value = config.TelegramChatId || "";
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+                document.querySelector("#JellyAskConfigForm").addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.TelegramBotToken = document.querySelector("#TelegramBotToken").value.trim();
+                        config.TelegramChatId = document.querySelector("#TelegramChatId").value.trim();
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

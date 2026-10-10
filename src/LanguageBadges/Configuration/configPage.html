@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Language Badges</title>
+</head>
+<body>
+    <div id="LanguageBadgesConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <h2 class="sectionTitle">Language Badges</h2>
+                <p>Pinta los idiomas de audio de cada pel&iacute;cula/episodio sobre el p&oacute;ster y en la ficha.
+                   Chip s&oacute;lido = audio; chip discontinuo &laquo;sub&raquo; = subt&iacute;tulos en un idioma que no est&aacute; como audio.
+                   Tras cambiar opciones, recarga la p&aacute;gina del navegador (F5).</p>
+                <form id="LanguageBadgesConfigForm">
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label><input is="emby-checkbox" type="checkbox" id="ShowOnCards" /><span>Mostrar en p&oacute;steres y listas</span></label>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label><input is="emby-checkbox" type="checkbox" id="ShowOnDetailPage" /><span>Mostrar en la ficha del &iacute;tem</span></label>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label><input is="emby-checkbox" type="checkbox" id="ShowSubtitles" /><span>Mostrar tambi&eacute;n subt&iacute;tulos</span></label>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label><input is="emby-checkbox" type="checkbox" id="ShowOnSeries" /><span>Series y temporadas: agregar idiomas de sus episodios</span></label>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="text" id="HighlightCodes" label="Idiomas a resaltar (siglas separadas por comas)" />
+                        <div class="fieldDescription">P. ej. <code>ES,LAT</code>. Se pintan en &aacute;mbar para distinguirlos de un vistazo.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="number" id="MaxCardLanguages" min="1" max="10" label="M&aacute;ximo de idiomas de audio por p&oacute;ster" />
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="text" id="LatinoKeywords" label="Palabras que marcan una pista espa&ntilde;ola como latina (LAT)" />
+                        <div class="fieldDescription">Se buscan en el t&iacute;tulo de la pista de audio (p. ej. &laquo;Espa&ntilde;ol Latino&raquo;).</div>
+                    </div>
+                    <button is="emby-button" type="submit" class="raised button-submit block"><span>Guardar</span></button>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = '56e27219-5a61-4f3b-96c2-e7e2e2076c0a';
+                var bools = ['ShowOnCards', 'ShowOnDetailPage', 'ShowSubtitles', 'ShowOnSeries'];
+                var texts = ['HighlightCodes', 'LatinoKeywords', 'MaxCardLanguages'];
+                var page = document.querySelector('#LanguageBadgesConfigPage');
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        bools.forEach(function (k) { page.querySelector('#' + k).checked = !!config[k]; });
+                        texts.forEach(function (k) { page.querySelector('#' + k).value = config[k]; });
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+                page.querySelector('#LanguageBadgesConfigForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        bools.forEach(function (k) { config[k] = page.querySelector('#' + k).checked; });
+                        config.HighlightCodes = page.querySelector('#HighlightCodes').value;
+                        config.LatinoKeywords = page.querySelector('#LatinoKeywords').value;
+                        config.MaxCardLanguages = parseInt(page.querySelector('#MaxCardLanguages').value, 10) || 3;
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (r) {
+                            Dashboard.processPluginConfigurationUpdateResult(r);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
