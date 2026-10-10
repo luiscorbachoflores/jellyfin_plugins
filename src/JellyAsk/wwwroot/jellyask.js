@@ -16,7 +16,10 @@
         '.jellyAskCancel{background:transparent;color:inherit;border:1px solid #555 !important;}',
         '.jellyAskSubmit{background:#00a4dc;color:#fff;}',
         '.jellyAskSubmit:disabled{opacity:.5;cursor:default;}',
-        '.jellyAskStatus{font-size:.85em;opacity:.85;min-height:1.2em;margin-top:.5em;}'
+        '.jellyAskStatus{font-size:.85em;opacity:.85;min-height:1.2em;margin-top:.5em;}',
+        '.jellyAskFab{position:fixed;right:1.2em;bottom:1.2em;width:3.2em;height:3.2em;border-radius:50%;background:#00a4dc;color:#fff;border:none;cursor:pointer;z-index:9000;box-shadow:0 2px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;}',
+        '.jellyAskFab .material-icons{font-size:1.6em;}',
+        '.jellyAskFab.hide{display:none;}'
     ].join('');
 
     function injectStyle() {
@@ -115,58 +118,43 @@
 
     function isDashboardRoute() {
         var hash = window.location.hash || '';
-        return /#!?\/dashboard/.test(hash);
+        return /#!?\/(dashboard|login|startup)/.test(hash);
     }
 
-    function ensureMenuButton() {
+    // Boton flotante fijo, independiente del menu de navegacion de Jellyfin.
+    // Antes se insertaba un enlace dentro del cajon lateral clasico (anclado a
+    // ".mainDrawer-scrollContainer" / ".btnSettings"), pero esa superficie ya
+    // no es donde los usuarios llegan a Configuracion en las versiones nuevas
+    // del cliente web (ahora es un menu aparte, React/MUI, colgado del avatar).
+    // Un FAB con posicion fija no depende de la estructura interna de ningun
+    // menu, asi que sobrevive a rediseños del cliente web.
+    var fab = null;
+
+    function ensureFab() {
         if (isDashboardRoute()) {
+            if (fab) {
+                fab.classList.add('hide');
+            }
             return;
         }
-        var scrollContainer = document.querySelector('.mainDrawer-scrollContainer');
-        if (!scrollContainer) {
-            return;
+        if (!fab) {
+            fab = document.createElement('button');
+            fab.type = 'button';
+            fab.className = 'jellyAskFab';
+            fab.title = 'Pedir película o serie';
+            fab.innerHTML = '<span class="material-icons movie_creation" aria-hidden="true"></span>';
+            fab.addEventListener('click', function (evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                openModal();
+            });
+            document.body.appendChild(fab);
         }
-        if (scrollContainer.querySelector('.jellyAskMenuOption')) {
-            return;
-        }
-
-        var link = document.createElement('a');
-        link.setAttribute('is', 'emby-linkbutton');
-        link.className = 'navMenuOption jellyAskMenuOption';
-        link.href = '#';
-        link.innerHTML = '' +
-            '<span class="material-icons navMenuOptionIcon movie_creation" aria-hidden="true"></span>' +
-            '<span class="navMenuOptionText">Pedir película</span>';
-        link.addEventListener('click', function (evt) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            openModal();
-        });
-
-        var settingsLink = scrollContainer.querySelector('.btnSettings');
-        if (settingsLink && settingsLink.parentNode) {
-            settingsLink.parentNode.insertBefore(link, settingsLink);
-        } else {
-            scrollContainer.appendChild(link);
-        }
+        fab.classList.remove('hide');
     }
 
     injectStyle();
-    ensureMenuButton();
+    ensureFab();
 
-    // Se defiere a un frame aparte para no insertar el nodo en mitad del
-    // commit síncrono de React (el cliente web de Jellyfin), que es lo que
-    // provocaba el error "e.map is not a function" al entrar al Dashboard.
-    var pendingCheck = false;
-    var observer = new MutationObserver(function () {
-        if (pendingCheck) {
-            return;
-        }
-        pendingCheck = true;
-        requestAnimationFrame(function () {
-            pendingCheck = false;
-            ensureMenuButton();
-        });
-    });
-    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    window.addEventListener('hashchange', ensureFab);
 })();
