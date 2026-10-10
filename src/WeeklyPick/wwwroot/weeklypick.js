@@ -127,7 +127,7 @@
         backdrop.style.setProperty('--wp-accent-fg', accent.fg);
         backdrop.style.setProperty('--wp-surface', nativeSurface());
         backdrop.innerHTML = '' +
-            '<div class="wpModal" role="dialog" aria-modal="true" aria-labelledby="wpTitle" aria-describedby="wpText">' +
+            '<div class="wpModal focuscontainer" role="dialog" aria-modal="true" aria-labelledby="wpTitle" aria-describedby="wpText">' +
             '  <h2 id="wpTitle">Recomendación de la semana</h2>' +
             '  <p class="wpText" id="wpText"></p>' +
             '  <div class="wpActions"></div>' +
@@ -161,7 +161,12 @@
         document.body.appendChild(backdrop);
         modal = backdrop;
         document.addEventListener('keydown', onKeydown, true);
-        (viewBtn || closeBtn).focus();
+        var target = viewBtn || closeBtn;
+        target.focus();
+        // jellyfin-web may move focus to the page it is still loading behind us (TV autofocus): take it back once.
+        setTimeout(function () {
+            if (modal === backdrop && !backdrop.contains(document.activeElement)) { target.focus(); }
+        }, 500);
     }
 
     function markSeen(t) {
