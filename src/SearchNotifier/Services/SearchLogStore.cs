@@ -38,14 +38,12 @@ public class SearchLogStore
             var entries = Load();
             entries.Add(ev);
             var max = Math.Max(10, Plugin.Instance?.Configuration.MaxLogEntries ?? 2000);
-            if (entries.Count > max)
+            File.AppendAllText(_path, JsonSerializer.Serialize(ev, JsonOptions) + "\n");
+            // Trim in batches (25% slack) instead of rewriting the whole file on every search once the limit is reached.
+            if (entries.Count > max + Math.Max(1, max / 4))
             {
                 entries.RemoveRange(0, entries.Count - max);
                 RewriteFile(entries);
-            }
-            else
-            {
-                File.AppendAllText(_path, JsonSerializer.Serialize(ev, JsonOptions) + "\n");
             }
         }
     }
@@ -55,7 +53,8 @@ public class SearchLogStore
     {
         lock (_lock)
         {
-            return Load().AsEnumerable().Reverse().Take(Math.Clamp(limit, 1, 10000)).ToList();
+            var max = Math.Max(10, Plugin.Instance?.Configuration.MaxLogEntries ?? 2000);
+            return Load().AsEnumerable().Reverse().Take(Math.Clamp(limit, 1, Math.Min(10000, max))).ToList();
         }
     }
 

@@ -51,6 +51,11 @@ public class SearchNotifierController : ControllerBase
             return BadRequest(new { ok = false, message = "No hay URL de webhook configurada." });
         }
 
+        if (!Uri.TryCreate(target.Trim(), UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return BadRequest(new { ok = false, message = "La URL del webhook debe empezar por http:// o https://." });
+        }
+
         var ev = new SearchEvent
         {
             TimestampUtc = DateTime.UtcNow,
