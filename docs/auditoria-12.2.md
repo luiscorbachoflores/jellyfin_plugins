@@ -5,7 +5,7 @@ Fuera de alcance: Report Problem y el fork de Telegram Notifier.
 Fecha: 2026-10-10/11. Servidor de pruebas: `jellyfin/jellyfin:12` (Jellyfin **12.2.0**, web 12.2) y `jellyfin/jellyfin:10.11.8`,
 siempre en contenedores desechables con datos de prueba; no se tocó producción.
 
-Rama local: `audit-12.2` en la VM (`~/jellyfin-plugin/audit-12.2/`), sin push ni releases.
+Rama local: `audit-12.2` en la VM (`~/jellyfin-plugin/audit-12.2/`), sin push ni releases. Commits: base `31f9858`; harness `82afed2`; JellyAsk `b4fb4c2`+`e399ee4`; Reviews `a6a1816`+`b1a6700`; Language Badges `6fb9c4b`+`c05621e`; Search Notifier `4eb7e21`+`ad91825`; WeeklyPick `4d7fadb`+`0ed59cb`; tests/docs `7f2b679`.
 Ramas auxiliares (worktrees): `hotfix/reviews-1.4.2.0` (parche mínimo) y una copia desligada de la línea base `31f9858`.
 
 ## 1. Resumen
@@ -165,6 +165,7 @@ Rutas de evidencia relativas a `/tmp/claude-1000/shots/audit/` (Pi); `before/` =
 | T-2 | Media | Cuatro middlewares casi idénticos de inyección de `index.html`; tres comprobaban mal el estado/tipo de la respuesta | ✔ patrón de Language Badges (solo `200 text/html`, marca `data-plugin`, ruta relativa) |
 | T-3 | Info | Idioma: textos fijos en español. No se añade selector es/en: `documentElement.lang` vale `en-us` por defecto en usuarios sin configurar y cambiaría el idioma a quien hoy lo ve en español | decisión (sec. 8) |
 | T-4 | Info | **Fallo del propio Jellyfin 12.2.0** (no de los plugins): el servidor se cae con `ObjectDisposedException` en `WebSocketController` cuando un navegador cierra dos websockets a la vez (visto 2 veces); además un 403 en el websocket justo tras iniciar sesión con `ApiClient` y, en 10.11.8, peticiones a `/web/null`. El harness lo esquiva (cierra los websockets uno a uno y reinicia el contenedor) | informar a Jellyfin |
+| T-6 | Info | CSRF / inyección: todos los endpoints con efecto exigen la cabecera `Authorization` (no cookies), así que no son vulnerables a CSRF; todo el SQL de Reviews va parametrizado (probado con `'; --` y GUID basura); el único `innerHTML` restante es el HTML estático de los diálogos de JellyAsk y WeeklyPick (el texto del usuario va siempre con `textContent`) | ✔ |
 | T-5 | Info | APIs: compilación con `TreatWarningsAsErrors` sin avisos de obsolescencia en 12.2 (`IActivityManager`, `IUserManager`, `ILibraryManager`, `ISessionManager`, `MediaStream`, `BaseItemKind`); solo sugerencias de estilo (CA1873/CA1859) | – |
 
 ## 5. Convención de apilado y capas
@@ -217,7 +218,18 @@ estrella = `--jf-palette-starIcon-main`; errores = `--jf-palette-error-light`; `
 | Report Problem / Telegram Notifier | – | fuera de alcance | | Adoptar la convención del dock (sec. 5). |
 
 Compatibilidad: ningún GUID ni propiedad de configuración cambia (`TelegramBotToken`, `TelegramChatId`, `Enabled`, `Entries`, …); la base `reviews.db` conserva el esquema (solo se añaden índices).
-Todos los paquetes: `targetAbi 10.11.8.0`, net9 (sec. 3). Los zips están en `out/10.11.8/` (builds de 1.5.0.0 etc.) y `out/hotfix/`.
+Todos los paquetes: `targetAbi 10.11.8.0`, net9 (sec. 3). Los zips (candidatos a release, **sin publicar**) están en `~/jellyfin-plugin/audit-12.2/out/10.11.8/` y `out/hotfix/` (md5):
+
+| Zip | md5 |
+| --- | --- |
+| `Jellyfin.Plugin.JellyAsk_1.3.0.0.zip` | f35fcc161c2365d21e3248350ba4996f |
+| `Jellyfin.Plugin.Reviews_1.5.0.0.zip` | ff14318303a0f7000e5087cc7e69773b |
+| `Jellyfin.Plugin.LanguageBadges_1.0.1.0.zip` | 30c8047b6f6710d7431f2fa98303fef4 |
+| `Jellyfin.Plugin.SearchNotifier_1.0.1.0.zip` | 02110c2f016842400375711b8133471a |
+| `Jellyfin.Plugin.WeeklyPick_1.1.0.0.zip` | 99d69f3f4396aa295a99359affec991d |
+| `out/hotfix/Jellyfin.Plugin.Reviews_1.4.2.0.zip` | 1d170ecba95d0a0ce753d50e005b79fe |
+
+(El checksum del manifiesto se recalcula al publicar; estos md5 son de los zips locales. Los `manifest.json` no se han tocado.)
 
 ## 8. Pendiente y decisiones
 
