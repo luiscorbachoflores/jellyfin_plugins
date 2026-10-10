@@ -1,10 +1,13 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using Jellyfin.Plugin.LanguageBadges.Configuration;
 using Jellyfin.Plugin.LanguageBadges.Services;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,8 +23,11 @@ public class LanguageBadgesController : ControllerBase
     private readonly IUserManager _userManager;
     private readonly LanguageResolver _resolver;
 
-    public LanguageBadgesController(ILibraryManager libraryManager, IUserManager userManager, LanguageResolver resolver)
+    private readonly ILogger<LanguageBadgesController> _logger;
+
+    public LanguageBadgesController(ILibraryManager libraryManager, IUserManager userManager, LanguageResolver resolver, ILogger<LanguageBadgesController> logger)
     {
+        _logger = logger;
         _libraryManager = libraryManager;
         _userManager = userManager;
         _resolver = resolver;
@@ -90,7 +96,17 @@ public class LanguageBadgesController : ControllerBase
                 continue;
             }
 
-            var item = _libraryManager.GetItemById(id);
+            BaseItem? item;
+            try
+            {
+                item = _libraryManager.GetItemById(id);
+            }
+            catch (InvalidOperationException)
+            {
+                // Jellyfin 10.11 throws for placeholder rows it cannot deserialize: one bad id must not fail the whole batch.
+                continue;
+            }
+
             if (item is null)
             {
                 continue;
@@ -103,10 +119,17 @@ public class LanguageBadgesController : ControllerBase
                 continue;
             }
 
-            var langs = _resolver.Resolve(item);
-            if (langs is not null)
+            try
             {
-                result[raw] = langs;
+                var langs = _resolver.Resolve(item);
+                if (langs is not null)
+                {
+                    result[raw] = langs;
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException)
+            {
+                _logger.LogDebug(ex, "LanguageBadges: could not resolve {Id}", raw);
             }
         }
 
