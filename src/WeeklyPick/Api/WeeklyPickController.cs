@@ -91,14 +91,31 @@ public class WeeklyPickController : ControllerBase
             return Ok(new WeeklyPickResponseDto { Show = false });
         }
 
-        _store.MarkNotified(userId, weekKey);
-
+        // No se marca como visto aquí: el cliente todavía no ha mostrado nada. Si el fetch
+        // falla o la pestaña se cierra antes de pintar el aviso, el usuario lo vería en la
+        // siguiente visita. Lo marca /WeeklyPick/Ack, que el cliente llama solo cuando el
+        // aviso se ha mostrado de verdad en pantalla.
         return Ok(new WeeklyPickResponseDto
         {
             Show = true,
             Text = entry.Text,
             ItemId = string.IsNullOrWhiteSpace(entry.ItemId) ? null : entry.ItemId,
         });
+    }
+
+    [HttpPost("Ack")]
+    public async Task<ActionResult> PostAck()
+    {
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        {
+            return Unauthorized();
+        }
+
+        var userId = authInfo.UserId.ToString("N");
+        var weekKey = CurrentWeekKey(DateTime.Now);
+        _store.MarkNotified(userId, weekKey);
+        return Ok();
     }
 
     [HttpPost("Reset")]

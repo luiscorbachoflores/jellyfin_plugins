@@ -1,204 +1,212 @@
 [
-  {
-    "guid": "b7e1b6b4-6b1a-4a1a-9c1a-6f0b1e9c2d31",
-    "name": "Reviews",
-    "description": "Añade reseñas de usuario (estrellas en medios puntos + comentario, anónimo o autenticado) a las páginas de película y serie.",
-    "overview": "Widget de reseñas inyectado sin modificar jellyfin-web, con API REST propia y almacenamiento SQLite.",
-    "owner": "luiscorbachoflores",
-    "category": "General",
-    "versions": [
-      {
-        "version": "1.4.2.0",
-        "changelog": "Hotfix para Jellyfin 12.x: usa la cabecera Authorization: MediaBrowser Token (X-Emby-Token daba 401 y fallaban publicar, editar y eliminar) y la carga de reseñas va autenticada para que aparezcan los botones Editar y Eliminar.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.2.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "3592a42f2e98f590726a30b40d4e3529",
-        "timestamp": "2026-10-10T23:52:05Z"
-      },
-      {
-        "version": "1.4.1.0",
-        "changelog": "Estilo neutro: el widget hereda la tipografía y los colores del tema de Jellyfin, sin fuentes ni colores propios. Los colores de marca se ajustan desde el CSS personalizado del servidor. Sin cambios funcionales.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.1.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "ff0dc214517abd4845063f81d468a5fd",
-        "timestamp": "2026-10-06T00:00:00Z"
-      },
-      {
-        "version": "1.4.0.0",
-        "changelog": "Publicar sin nombre: casilla en lugar de los botones Anónimo/Usuario Jellyfin, con vista previa de quién firma la reseña. Rediseño visual del widget con tipografía editorial (versalitas, serif en comentarios, filetes en lugar de cajas), foco visible y adaptación a móvil. La reseña del director conserva su sello propio.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.0.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "b378d9951c1aa0ae0de339561eb89de5",
-        "timestamp": "2026-10-06T00:00:00Z"
-      },
-      {
-        "version": "1.3.0.0",
-        "changelog": "Reseña del director: las reseñas de Tito se muestran con el sello \"Nota del director\" y un estilo propio. Rediseño visual del widget (tokens de color, jerarquía, estados de foco, adaptación a móvil). Compatible con Jellyfin 10.11.8 y 12.x.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.3.0.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "3b01a13fd32eb15c3af12a021159c937",
-        "timestamp": "2026-10-06T00:00:00Z"
-      },
-      {
-        "version": "1.2.0.0",
-        "changelog": "La puntuacion por estrellas y el comentario pasan a ser independientes: se puede publicar solo con estrellas, solo con texto, o ambos (antes las estrellas eran obligatorias). Cada usuario puede editar o eliminar sus propias resenas (los administradores pueden moderar cualquiera). La media solo se calcula sobre resenas con puntuacion.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.2.0.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "21803906a8a392d93d45a59a3edbddd0",
-        "timestamp": "2026-07-17T00:00:00Z"
-      },
-      {
-        "version": "1.1.2.0",
-        "changelog": "Corrige que el ensamblado siempre reportaba version 0.0.0.0 en el panel de plugins (Plugin.cs no sobrescribia Version y el .csproj no fijaba AssemblyVersion), lo que podia hacer que Jellyfin considerase el plugin desactualizado de forma permanente. Sin cambios funcionales.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.1.2.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "ad741a9f2a8e59a9ca63e054c7b1afa3",
-        "timestamp": "2026-07-17T00:00:00Z"
-      },
-      {
-        "version": "1.1.1.0",
-        "changelog": "Recompilado contra Jellyfin.Controller 10.11.8 (la 1.1.0.0 exigia ABI 10.11.11 y Jellyfin marcaba el plugin como 'not supported' en instancias mas antiguas). Sin cambios funcionales.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.1.1.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "f69a2a50a933a3148fe23e23f302ccd0",
-        "timestamp": "2026-07-17T00:00:00Z"
-      },
-      {
-        "version": "1.1.0.0",
-        "changelog": "Publicar una resena (incluso anonima) requiere ahora sesion Jellyfin. En modo anonimo el nombre real solo lo ve un administrador; el resto de usuarios ven 'Anonimo'. Anade aviso opcional por Telegram al publicarse una resena.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.1.0.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "01a09dcc33fb82a3052cc31dd6b75326",
-        "timestamp": "2026-07-15T00:00:00Z"
-      },
-      {
-        "version": "1.0.1.0",
-        "changelog": "Corrige una excepcion no controlada (HTTP 304) que rompia la carga de la pagina en visitas repetidas.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.0.1.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "5bd70526129cd5a2d71743098f74ed2a",
-        "timestamp": "2026-07-15T00:00:00Z"
-      },
-      {
-        "version": "1.0.0.0",
-        "changelog": "Primera version: valoracion por estrellas en pasos de 0,5, comentarios, modo anonimo/usuario, inyeccion de widget via middleware.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/v1.0.0.0/Jellyfin.Plugin.Reviews.zip",
-        "checksum": "19cd37160e81d317530df08f2f21839e",
-        "timestamp": "2026-07-15T00:00:00Z"
-      }
-    ]
-  },
-  {
-    "guid": "c3f4a9e2-8d1b-4f6a-9e3c-7a2b5d6e8f10",
-    "name": "JellyAsk",
-    "description": "Permite a los usuarios pedir películas o series desde un botón flotante, avisando en el registro de actividad de Jellyfin y, opcionalmente, por Telegram.",
-    "overview": "Añade un botón flotante con un formulario de petición de títulos, registrado en el Activity Log nativo, con envío opcional a un bot de Telegram.",
-    "owner": "luiscorbachoflores",
-    "category": "General",
-    "versions": [
-      {
-        "version": "1.2.1.0",
-        "changelog": "Corrige el error 401 al enviar peticiones en Jellyfin 12.x: la peticion usa ahora la cabecera Authorization: MediaBrowser Token=\"...\" en lugar de la cabecera X-Emby-Token, retirada en esa version. Sin otros cambios.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.2.1.0/Jellyfin.Plugin.JellyAsk.zip",
-        "checksum": "dcc11dbd0771f3f2cf525fb5a2fd85dd",
-        "timestamp": "2026-10-10T23:30:00Z"
-      },
-      {
-        "version": "1.2.0.0",
-        "changelog": "Boton flotante fijo en vez de un enlace dentro del cajon lateral clasico: esa superficie ya no es donde los usuarios llegan a Ajustes en el cliente web 12.x (ahora es un menu aparte, colgado del avatar), asi que el enlace antiguo quedaba invisible en la practica. El boton flotante no depende de la estructura interna de ningun menu de Jellyfin.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.2.0.0/Jellyfin.Plugin.JellyAsk.zip",
-        "checksum": "816d90116e877570d82a6fe269bab1e9",
-        "timestamp": "2026-10-10T23:05:00Z"
-      },
-      {
-        "version": "1.1.2.0",
-        "changelog": "Corrige que el ensamblado siempre reportaba version 0.0.0.0 en el panel de plugins (Plugin.cs no sobrescribia Version y el .csproj no fijaba AssemblyVersion), lo que podia hacer que Jellyfin considerase el plugin desactualizado de forma permanente. Sin cambios funcionales.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.1.2.0/Jellyfin.Plugin.JellyAsk.zip",
-        "checksum": "81a952edb47edddf047ffaabc6bebc92",
-        "timestamp": "2026-07-17T00:00:00Z"
-      },
-      {
-        "version": "1.1.1.0",
-        "changelog": "Recompilado contra Jellyfin.Controller 10.11.8 (la 1.1.0.0 exigia ABI 10.11.11 y Jellyfin marcaba el plugin como 'not supported' en instancias mas antiguas). Sin cambios funcionales.",
-        "targetAbi": "10.11.8.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.1.1.0/Jellyfin.Plugin.JellyAsk.zip",
-        "checksum": "398f5d674ed7941ed0226afe98dc026c",
-        "timestamp": "2026-07-17T00:00:00Z"
-      },
-      {
-        "version": "1.1.0.0",
-        "changelog": "Anade pagina de configuracion para un bot de Telegram opcional: si se rellena Bot Token y Chat ID, cada peticion tambien se envia por Telegram ademas de registrarse en el Activity Log.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.1.0.0/Jellyfin.Plugin.JellyAsk.zip",
-        "checksum": "92e372593d7f24f3902d0c10867336ed",
-        "timestamp": "2026-07-15T00:00:00Z"
-      },
-      {
-        "version": "1.0.0.0",
-        "changelog": "Primera version: boton en el menu (sobre Ajustes), formulario con peticion en texto libre, registro en el Activity Log de Jellyfin.",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.0.0.0/Jellyfin.Plugin.JellyAsk.zip",
-        "checksum": "3a2f54b5ae8fd58e723cd391aca690c9",
-        "timestamp": "2026-07-15T00:00:00Z"
-      }
-    ]
-  },
-  {
-    "guid": "56e27219-5a61-4f3b-96c2-e7e2e2076c0a",
-    "name": "Language Badges",
-    "description": "Muestra de forma clara los idiomas de audio y subtitulos de cada pelicula/serie sobre el poster y en la ficha.",
-    "overview": "Insignias ES/EN/LAT/JA... (audio) y \"sub XX\" (subtitulos) inyectadas sin modificar jellyfin-web; resalta los idiomas que le importan al usuario.",
-    "owner": "luiscorbachoflores",
-    "category": "General",
-    "versions": [
-      {
-        "version": "1.0.0.0",
-        "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.LanguageBadges-jellyfin12.zip).",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/languagebadges-v1.0.0.0/Jellyfin.Plugin.LanguageBadges.zip",
-        "checksum": "58d7f56415d980753e2b35f4c0282682",
-        "timestamp": "2026-09-29T00:00:00Z"
-      }
-    ]
-  },
-  {
-    "guid": "8927bd8c-5eeb-4745-90c4-edb2ebd236cc",
-    "name": "Search Notifier",
-    "description": "Registra lo que buscan los usuarios y lo notifica a un webhook (Telegram, Discord, Slack...).",
-    "overview": "Detecta las busquedas (searchTerm) de cualquier cliente, las agrupa y avisa al admin; opcion de avisar solo cuando no hay resultados.",
-    "owner": "luiscorbachoflores",
-    "category": "Notifications",
-    "versions": [
-      {
-        "version": "1.0.0.0",
-        "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.SearchNotifier-jellyfin12.zip).",
-        "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/searchnotifier-v1.0.0.0/Jellyfin.Plugin.SearchNotifier.zip",
-        "checksum": "f0de564994458d19e0eb22d4520fb0db",
-        "timestamp": "2026-09-29T00:00:00Z"
-      }
-    ]
-  },
-  {
-    "guid": "63a86ee3-680e-4577-8a85-a0594cd8548a",
-    "name": "Recomendación Semanal",
-    "description": "Muestra un aviso emergente, una vez por semana (reinicio los viernes), con una recomendación personal del dueño de la filmoteca.",
-    "overview": "Aviso emergente semanal con una recomendación personal, configurable desde el panel de plugins. Requiere Jellyfin 12.2.",
-    "owner": "luiscorbachoflores",
-    "category": "General",
-    "versions": [
-      {
-        "version": "1.1.0.0",
-        "changelog": "Primera version publicada. Aviso emergente semanal (reinicio los viernes) con una recomendacion personal; pagina de configuracion en el panel de plugins. Para Jellyfin 12.2.",
-        "targetAbi": "12.2.0.0",
-        "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.1.0.0/Jellyfin.Plugin.WeeklyPick.zip",
-        "checksum": "2b72f6fa1026b4443acdff91fccdc637",
-        "timestamp": "2026-10-10T23:30:00Z"
-      }
-    ]
-  }
+    {
+        "guid": "b7e1b6b4-6b1a-4a1a-9c1a-6f0b1e9c2d31",
+        "name": "Reviews",
+        "description": "Añade reseñas de usuario (estrellas en medios puntos + comentario, anónimo o autenticado) a las páginas de película y serie.",
+        "overview": "Widget de reseñas inyectado sin modificar jellyfin-web, con API REST propia y almacenamiento SQLite.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.4.2.0",
+                "changelog": "Hotfix para Jellyfin 12.x: usa la cabecera Authorization: MediaBrowser Token (X-Emby-Token daba 401 y fallaban publicar, editar y eliminar) y la carga de reseñas va autenticada para que aparezcan los botones Editar y Eliminar.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.2.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "3592a42f2e98f590726a30b40d4e3529",
+                "timestamp": "2026-10-10T23:52:05Z"
+            },
+            {
+                "version": "1.4.1.0",
+                "changelog": "Estilo neutro: el widget hereda la tipografía y los colores del tema de Jellyfin, sin fuentes ni colores propios. Los colores de marca se ajustan desde el CSS personalizado del servidor. Sin cambios funcionales.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.1.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "ff0dc214517abd4845063f81d468a5fd",
+                "timestamp": "2026-10-06T00:00:00Z"
+            },
+            {
+                "version": "1.4.0.0",
+                "changelog": "Publicar sin nombre: casilla en lugar de los botones Anónimo/Usuario Jellyfin, con vista previa de quién firma la reseña. Rediseño visual del widget con tipografía editorial (versalitas, serif en comentarios, filetes en lugar de cajas), foco visible y adaptación a móvil. La reseña del director conserva su sello propio.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.0.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "b378d9951c1aa0ae0de339561eb89de5",
+                "timestamp": "2026-10-06T00:00:00Z"
+            },
+            {
+                "version": "1.3.0.0",
+                "changelog": "Reseña del director: las reseñas de Tito se muestran con el sello \"Nota del director\" y un estilo propio. Rediseño visual del widget (tokens de color, jerarquía, estados de foco, adaptación a móvil). Compatible con Jellyfin 10.11.8 y 12.x.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.3.0.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "3b01a13fd32eb15c3af12a021159c937",
+                "timestamp": "2026-10-06T00:00:00Z"
+            },
+            {
+                "version": "1.2.0.0",
+                "changelog": "La puntuacion por estrellas y el comentario pasan a ser independientes: se puede publicar solo con estrellas, solo con texto, o ambos (antes las estrellas eran obligatorias). Cada usuario puede editar o eliminar sus propias resenas (los administradores pueden moderar cualquiera). La media solo se calcula sobre resenas con puntuacion.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.2.0.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "21803906a8a392d93d45a59a3edbddd0",
+                "timestamp": "2026-07-17T00:00:00Z"
+            },
+            {
+                "version": "1.1.2.0",
+                "changelog": "Corrige que el ensamblado siempre reportaba version 0.0.0.0 en el panel de plugins (Plugin.cs no sobrescribia Version y el .csproj no fijaba AssemblyVersion), lo que podia hacer que Jellyfin considerase el plugin desactualizado de forma permanente. Sin cambios funcionales.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.1.2.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "ad741a9f2a8e59a9ca63e054c7b1afa3",
+                "timestamp": "2026-07-17T00:00:00Z"
+            },
+            {
+                "version": "1.1.1.0",
+                "changelog": "Recompilado contra Jellyfin.Controller 10.11.8 (la 1.1.0.0 exigia ABI 10.11.11 y Jellyfin marcaba el plugin como 'not supported' en instancias mas antiguas). Sin cambios funcionales.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.1.1.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "f69a2a50a933a3148fe23e23f302ccd0",
+                "timestamp": "2026-07-17T00:00:00Z"
+            },
+            {
+                "version": "1.1.0.0",
+                "changelog": "Publicar una resena (incluso anonima) requiere ahora sesion Jellyfin. En modo anonimo el nombre real solo lo ve un administrador; el resto de usuarios ven 'Anonimo'. Anade aviso opcional por Telegram al publicarse una resena.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.1.0.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "01a09dcc33fb82a3052cc31dd6b75326",
+                "timestamp": "2026-07-15T00:00:00Z"
+            },
+            {
+                "version": "1.0.1.0",
+                "changelog": "Corrige una excepcion no controlada (HTTP 304) que rompia la carga de la pagina en visitas repetidas.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.0.1.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "5bd70526129cd5a2d71743098f74ed2a",
+                "timestamp": "2026-07-15T00:00:00Z"
+            },
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version: valoracion por estrellas en pasos de 0,5, comentarios, modo anonimo/usuario, inyeccion de widget via middleware.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/v1.0.0.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "19cd37160e81d317530df08f2f21839e",
+                "timestamp": "2026-07-15T00:00:00Z"
+            }
+        ]
+    },
+    {
+        "guid": "c3f4a9e2-8d1b-4f6a-9e3c-7a2b5d6e8f10",
+        "name": "JellyAsk",
+        "description": "Permite a los usuarios pedir películas o series desde un botón flotante, avisando en el registro de actividad de Jellyfin y, opcionalmente, por Telegram.",
+        "overview": "Añade un botón flotante con un formulario de petición de títulos, registrado en el Activity Log nativo, con envío opcional a un bot de Telegram.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.2.1.0",
+                "changelog": "Corrige el error 401 al enviar peticiones en Jellyfin 12.x: la peticion usa ahora la cabecera Authorization: MediaBrowser Token=\"...\" en lugar de la cabecera X-Emby-Token, retirada en esa version. Sin otros cambios.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.2.1.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "dcc11dbd0771f3f2cf525fb5a2fd85dd",
+                "timestamp": "2026-10-10T23:30:00Z"
+            },
+            {
+                "version": "1.2.0.0",
+                "changelog": "Boton flotante fijo en vez de un enlace dentro del cajon lateral clasico: esa superficie ya no es donde los usuarios llegan a Ajustes en el cliente web 12.x (ahora es un menu aparte, colgado del avatar), asi que el enlace antiguo quedaba invisible en la practica. El boton flotante no depende de la estructura interna de ningun menu de Jellyfin.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.2.0.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "816d90116e877570d82a6fe269bab1e9",
+                "timestamp": "2026-10-10T23:05:00Z"
+            },
+            {
+                "version": "1.1.2.0",
+                "changelog": "Corrige que el ensamblado siempre reportaba version 0.0.0.0 en el panel de plugins (Plugin.cs no sobrescribia Version y el .csproj no fijaba AssemblyVersion), lo que podia hacer que Jellyfin considerase el plugin desactualizado de forma permanente. Sin cambios funcionales.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.1.2.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "81a952edb47edddf047ffaabc6bebc92",
+                "timestamp": "2026-07-17T00:00:00Z"
+            },
+            {
+                "version": "1.1.1.0",
+                "changelog": "Recompilado contra Jellyfin.Controller 10.11.8 (la 1.1.0.0 exigia ABI 10.11.11 y Jellyfin marcaba el plugin como 'not supported' en instancias mas antiguas). Sin cambios funcionales.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.1.1.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "398f5d674ed7941ed0226afe98dc026c",
+                "timestamp": "2026-07-17T00:00:00Z"
+            },
+            {
+                "version": "1.1.0.0",
+                "changelog": "Anade pagina de configuracion para un bot de Telegram opcional: si se rellena Bot Token y Chat ID, cada peticion tambien se envia por Telegram ademas de registrarse en el Activity Log.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.1.0.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "92e372593d7f24f3902d0c10867336ed",
+                "timestamp": "2026-07-15T00:00:00Z"
+            },
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version: boton en el menu (sobre Ajustes), formulario con peticion en texto libre, registro en el Activity Log de Jellyfin.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.0.0.0/Jellyfin.Plugin.JellyAsk.zip",
+                "checksum": "3a2f54b5ae8fd58e723cd391aca690c9",
+                "timestamp": "2026-07-15T00:00:00Z"
+            }
+        ]
+    },
+    {
+        "guid": "56e27219-5a61-4f3b-96c2-e7e2e2076c0a",
+        "name": "Language Badges",
+        "description": "Muestra de forma clara los idiomas de audio y subtitulos de cada pelicula/serie sobre el poster y en la ficha.",
+        "overview": "Insignias ES/EN/LAT/JA... (audio) y \"sub XX\" (subtitulos) inyectadas sin modificar jellyfin-web; resalta los idiomas que le importan al usuario.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.LanguageBadges-jellyfin12.zip).",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/languagebadges-v1.0.0.0/Jellyfin.Plugin.LanguageBadges.zip",
+                "checksum": "58d7f56415d980753e2b35f4c0282682",
+                "timestamp": "2026-09-29T00:00:00Z"
+            }
+        ]
+    },
+    {
+        "guid": "8927bd8c-5eeb-4745-90c4-edb2ebd236cc",
+        "name": "Search Notifier",
+        "description": "Registra lo que buscan los usuarios y lo notifica a un webhook (Telegram, Discord, Slack...).",
+        "overview": "Detecta las busquedas (searchTerm) de cualquier cliente, las agrupa y avisa al admin; opcion de avisar solo cuando no hay resultados.",
+        "owner": "luiscorbachoflores",
+        "category": "Notifications",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version. Zip para Jellyfin 10.11.x; para Jellyfin 12.x hay un zip aparte en la release (Jellyfin.Plugin.SearchNotifier-jellyfin12.zip).",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/searchnotifier-v1.0.0.0/Jellyfin.Plugin.SearchNotifier.zip",
+                "checksum": "f0de564994458d19e0eb22d4520fb0db",
+                "timestamp": "2026-09-29T00:00:00Z"
+            }
+        ]
+    },
+    {
+        "guid": "63a86ee3-680e-4577-8a85-a0594cd8548a",
+        "name": "Recomendación Semanal",
+        "description": "Muestra un aviso emergente, una vez por semana (reinicio los viernes), con una recomendación personal del dueño de la filmoteca.",
+        "overview": "Aviso emergente semanal con una recomendación personal, configurable desde el panel de plugins. Requiere Jellyfin 12.2.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.1.1.0",
+                "changelog": "Corrige que el aviso se marcaba como visto al pedirlo al servidor, antes de llegar a mostrarse: si el fetch fallaba o se cerraba la pestana a tiempo, el usuario se quedaba sin verlo esa semana. Ahora el servidor no lo marca hasta que el cliente confirma con /WeeklyPick/Ack, que se llama justo despues de pintar el aviso en pantalla.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.1.1.0/Jellyfin.Plugin.WeeklyPick.zip",
+                "checksum": "ed8c93bc1812efc27b0ca416901c93b2",
+                "timestamp": "2026-10-11T00:00:00Z"
+            },
+            {
+                "version": "1.1.0.0",
+                "changelog": "Primera version publicada. Aviso emergente semanal (reinicio los viernes) con una recomendacion personal; pagina de configuracion en el panel de plugins. Para Jellyfin 12.2.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.1.0.0/Jellyfin.Plugin.WeeklyPick.zip",
+                "checksum": "2b72f6fa1026b4443acdff91fccdc637",
+                "timestamp": "2026-10-10T23:30:00Z"
+            }
+        ]
+    }
 ]

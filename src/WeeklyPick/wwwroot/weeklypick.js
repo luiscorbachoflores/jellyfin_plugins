@@ -71,11 +71,16 @@
             setTimeout(check, 1000);
             return;
         }
-        fetch('/WeeklyPick/Current', { headers: { 'Authorization': 'MediaBrowser Token="' + token + '"' } })
+        var headers = { 'Authorization': 'MediaBrowser Token="' + token + '"' };
+        fetch('/WeeklyPick/Current', { headers: headers })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (data && data.Show) {
                     showModal(data.Text, data.ItemId);
+                    // Se confirma como visto solo ahora que el aviso está realmente en
+                    // pantalla, no al pedirlo: si el fetch hubiera fallado o la pestaña
+                    // se hubiera cerrado antes, el usuario lo vería la próxima vez.
+                    fetch('/WeeklyPick/Ack', { method: 'POST', headers: headers }).catch(function () {});
                 }
             })
             .catch(function () {});
