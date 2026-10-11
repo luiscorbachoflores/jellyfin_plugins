@@ -140,12 +140,14 @@ public class ReviewsController : ControllerBase
         var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
         if (!authInfo.IsAuthenticated || authInfo.User is null)
         {
+            _logger.LogWarning("Reviews: PUT {ReviewId} rechazado, sin sesion valida (IsAuthenticated={IsAuth}).", reviewId, authInfo.IsAuthenticated);
             return Unauthorized();
         }
 
         var existing = _repository.GetById(reviewId);
         if (existing is null || existing.ItemId != itemId)
         {
+            _logger.LogWarning("Reviews: PUT {ReviewId} no encontrado o itemId no coincide (pedido={ItemId}, guardado={ExistingItemId}).", reviewId, itemId, existing?.ItemId);
             return NotFound();
         }
 
@@ -153,6 +155,7 @@ public class ReviewsController : ControllerBase
         var isAdmin = authInfo.User.HasPermission(PermissionKind.IsAdministrator);
         if (existing.UserId != userId && !isAdmin)
         {
+            _logger.LogWarning("Reviews: PUT {ReviewId} denegado, el usuario {UserId} no es el autor {OwnerId} ni admin.", reviewId, userId, existing.UserId);
             return Forbid();
         }
 
@@ -171,12 +174,14 @@ public class ReviewsController : ControllerBase
         var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
         if (!authInfo.IsAuthenticated || authInfo.User is null)
         {
+            _logger.LogWarning("Reviews: DELETE {ReviewId} rechazado, sin sesion valida (IsAuthenticated={IsAuth}).", reviewId, authInfo.IsAuthenticated);
             return Unauthorized();
         }
 
         var existing = _repository.GetById(reviewId);
         if (existing is null || existing.ItemId != itemId)
         {
+            _logger.LogWarning("Reviews: DELETE {ReviewId} no encontrado o itemId no coincide (pedido={ItemId}, guardado={ExistingItemId}).", reviewId, itemId, existing?.ItemId);
             return NotFound();
         }
 
@@ -184,6 +189,7 @@ public class ReviewsController : ControllerBase
         var isAdmin = authInfo.User.HasPermission(PermissionKind.IsAdministrator);
         if (existing.UserId != userId && !isAdmin)
         {
+            _logger.LogWarning("Reviews: DELETE {ReviewId} denegado, el usuario {UserId} no es el autor {OwnerId} ni admin.", reviewId, userId, existing.UserId);
             return Forbid();
         }
 

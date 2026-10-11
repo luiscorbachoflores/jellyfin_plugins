@@ -81,7 +81,6 @@
         "    resize: vertical;\n",
         "    font: inherit;\n",
         "    padding: .6em .7em;\n",
-        "    color: inherit;\n",
         "}\n",
         ".reviewsSubmit {\n",
         "    align-self: flex-start;\n",
@@ -349,7 +348,7 @@
             '  <div class="reviewsStarsHint">Estrellas y comentario son opcionales: solo hace falta uno de los dos. Vuelve a pulsar la misma puntuación para quitarla.</div>' +
             '  <label class="reviewsAnonCheck"><input type="checkbox" class="reviewsAnonInput"><span>Publicar sin mi nombre</span></label>' +
             '  <div class="reviewsAuthorPreview"></div>' +
-            '  <textarea placeholder="Escribe tu opinión sobre este título (opcional si ya has puntuado con estrellas)..."></textarea>' +
+            '  <textarea class="emby-textarea" placeholder="Escribe tu opinión sobre este título (opcional si ya has puntuado con estrellas)..."></textarea>' +
             '  <button type="button" class="reviewsSubmit">Publicar reseña</button>' +
             '  <button type="button" class="reviewsCancelEdit" style="display:none;">Cancelar edición</button>' +
             '  <div class="reviewsStatus"></div>' +
@@ -464,8 +463,8 @@
                             resetForm();
                         }
                         refresh();
-                    }).catch(function () {
-                        setStatus(container, 'No se pudo eliminar la reseña.');
+                    }).catch(function (err) {
+                        setStatus(container, 'No se pudo eliminar la reseña (' + err.message + ').');
                     });
                 }
             }
