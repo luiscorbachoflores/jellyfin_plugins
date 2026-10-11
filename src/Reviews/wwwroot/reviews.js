@@ -362,11 +362,11 @@
 
         var anonInput = container.querySelector('.reviewsAnonInput');
         var previewEl = container.querySelector('.reviewsAuthorPreview');
-        var client = apiClient();
-        var loggedIn = !!(client && client.accessToken && client.accessToken());
+        var loggedIn = false;
         var userName = '';
         var editingId = null;
         var currentReviews = [];
+        var loginRetries = 0;
 
         function refreshPreview() {
             if (!loggedIn) {
@@ -381,17 +381,35 @@
             anonInput.checked = anon;
             refreshPreview();
         }
-        if (!loggedIn) {
-            anonInput.checked = true;
-            anonInput.disabled = true;
-        } else if (client.getCurrentUser) {
-            client.getCurrentUser().then(function (u) {
-                userName = (u && u.Name) || '';
-                refreshPreview();
-            }).catch(function () {});
+
+        // ApiClient puede tardar en tener el token listo justo cuando se construye el
+        // widget (sobre todo recién reconectado). loggedIn se reevalúa aquí y otra vez
+        // justo antes de publicar/editar/borrar, en vez de fiarse de una lectura única.
+        function refreshLoginState() {
+            var c = apiClient();
+            var was = loggedIn;
+            loggedIn = !!(c && c.accessToken && c.accessToken());
+            if (loggedIn) {
+                anonInput.disabled = false;
+                if (!was && c.getCurrentUser) {
+                    c.getCurrentUser().then(function (u) {
+                        userName = (u && u.Name) || '';
+                        refreshPreview();
+                    }).catch(function () {});
+                }
+            } else {
+                anonInput.checked = true;
+                anonInput.disabled = true;
+                if (loginRetries < 10) {
+                    loginRetries += 1;
+                    setTimeout(refreshLoginState, 500);
+                }
+            }
+            refreshPreview();
+            return loggedIn;
         }
         anonInput.addEventListener('change', refreshPreview);
-        refreshPreview();
+        refreshLoginState();
 
         var textarea = container.querySelector('textarea');
         var submitBtn = container.querySelector('.reviewsSubmit');
@@ -477,7 +495,7 @@
                 setStatus(container, 'Indica una puntuación, un comentario, o ambos.');
                 return;
             }
-            if (!loggedIn) {
+            if (!refreshLoginState()) {
                 setStatus(container, 'Necesitas iniciar sesión en Jellyfin para publicar una reseña (incluso en modo anónimo, nadie más verá tu nombre).');
                 return;
             }

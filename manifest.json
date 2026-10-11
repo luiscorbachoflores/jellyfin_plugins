@@ -8,6 +8,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.4.3.0",
+                "changelog": "Arregla publicar/editar/borrar en Jellyfin 12.x: la cabecera de sesion pasa a Authorization: MediaBrowser Token (antes X-Emby-Token, que 12.x ignora). Ademas corrige que el widget comprobaba si habias iniciado sesion una sola vez al cargar la ficha; si el token de ApiClient no estaba listo en ese instante (tipico justo tras reconectar), te quedabas marcado como no-logueado para siempre en esa pagina aunque si lo estuvieras. Ahora se reintenta y se revalida justo antes de publicar.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.4.3.0/Jellyfin.Plugin.Reviews.zip",
+                "checksum": "8f3a9d1fc6241bbb1cbe1fdcf47ca726",
+                "timestamp": "2026-10-11T00:00:00Z"
+            },
+            {
                 "version": "1.4.1.0",
                 "changelog": "Estilo neutro: el widget hereda la tipografía y los colores del tema de Jellyfin, sin fuentes ni colores propios. Los colores de marca se ajustan desde el CSS personalizado del servidor. Sin cambios funcionales.",
                 "targetAbi": "10.11.8.0",
