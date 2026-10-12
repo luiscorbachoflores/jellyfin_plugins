@@ -42,6 +42,13 @@ public class WeeklyPickController : ControllerBase
             .FirstOrDefault();
     }
 
+    /// <summary>Si la entrada no tiene lista de usuarios (vacía), es para todos. Si la tiene,
+    /// solo para los que están en ella.</summary>
+    internal static bool IsTargeted(WeeklyEntry entry, string userId)
+    {
+        return entry.UserIds is null || entry.UserIds.Count == 0 || entry.UserIds.Contains(userId);
+    }
+
     private static async Task<(bool IsAdmin, bool IsAuthenticated)> CheckAdmin(IAuthorizationContext authorizationContext, HttpRequest request)
     {
         var authInfo = await authorizationContext.GetAuthorizationInfo(request).ConfigureAwait(false);
@@ -90,6 +97,11 @@ public class WeeklyPickController : ControllerBase
         }
 
         var userId = authInfo.UserId.ToString("N");
+        if (!IsTargeted(entry, userId))
+        {
+            return Ok(new WeeklyPickResponseDto { Show = false });
+        }
+
         if (!_store.ShouldShowToday(userId, entry.Id, Math.Max(entry.TimesToShow, 1), Today(now)))
         {
             return Ok(new WeeklyPickResponseDto { Show = false });
@@ -204,9 +216,14 @@ public class WeeklyPickController : ControllerBase
         }
 
         var states = _store.StatesForEntry(entryId);
+        var entry = Plugin.Instance!.Configuration.Entries.FirstOrDefault(e => e.Id == entryId);
+        var targetIds = entry is not null && entry.UserIds is not null && entry.UserIds.Count > 0
+            ? new HashSet<string>(entry.UserIds)
+            : null;
 
         var rows = _userManager.GetUsers()
             .Where(u => !u.Permissions.Any(p => p.Kind == Jellyfin.Database.Implementations.Enums.PermissionKind.IsDisabled && p.Value))
+            .Where(u => targetIds is null || targetIds.Contains(u.Id.ToString("N")))
             .Select(u =>
             {
                 var uid = u.Id.ToString("N");

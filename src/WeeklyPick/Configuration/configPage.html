@@ -53,6 +53,10 @@
                             <button is="emby-button" type="button" id="NewItemClear" class="raised" style="margin-left:.6em;padding:.2em .8em">Quitar</button>
                         </div>
                     </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused">Usuarios (ninguno marcado = todos)</label>
+                        <div id="NewUserPicker" style="display:flex;flex-wrap:wrap;gap:.8em;padding:.4em 0"></div>
+                    </div>
                     <button is="emby-button" type="button" id="BtnAdd" class="raised button-submit block">
                         <span>Añadir a la lista</span>
                     </button>
@@ -95,6 +99,7 @@
                 var chosenItemId = "";
                 var chosenItemTitle = "";
                 var selectedEntryId = "";
+                var allUsers = [];
 
                 function esc(s) {
                     var d = document.createElement("div");
@@ -118,9 +123,12 @@
                     }
                     list.innerHTML = entries.map(function (e, i) {
                         var who = e.ItemTitle ? (" <em>(" + esc(e.ItemTitle) + ")</em>") : (e.ItemId ? " <em>(con ficha)</em>" : "");
+                        var forWhom = (e.UserIds && e.UserIds.length)
+                            ? e.UserIds.length + " usuario" + (e.UserIds.length === 1 ? "" : "s")
+                            : "todos";
                         return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(255,255,255,.1)\">" +
                             "<strong style=\"min-width:11em\">" + esc(e.DateStart) + " &rarr; " + esc(e.DateEnd) + "</strong>" +
-                            "<span style=\"flex:1\">" + esc(e.Text) + who + " <span style=\"opacity:.6\">(" + esc(e.TimesToShow) + "x)</span></span>" +
+                            "<span style=\"flex:1\">" + esc(e.Text) + who + " <span style=\"opacity:.6\">(" + esc(e.TimesToShow) + "x · " + esc(forWhom) + ")</span></span>" +
                             "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-stats-id=\"" + esc(e.Id) + "\">Ver quién la ha visto</button>" +
                             "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-idx=\"" + i + "\">Borrar</button>" +
                             "</div>";
@@ -246,8 +254,28 @@
                     });
                 }
 
+                function renderUserPicker() {
+                    var box = document.querySelector("#NewUserPicker");
+                    if (!allUsers.length) {
+                        box.innerHTML = "<span style=\"opacity:.7\">No se pudo cargar la lista de usuarios.</span>";
+                        return;
+                    }
+                    box.innerHTML = allUsers.map(function (u) {
+                        return "<label style=\"display:flex;align-items:center;gap:.3em;cursor:pointer\">" +
+                            "<input is=\"emby-checkbox\" type=\"checkbox\" class=\"wpUserCheck\" value=\"" + esc(u.Id) + "\" />" +
+                            "<span>" + esc(u.Name) + "</span></label>";
+                    }).join("");
+                }
+
                 document.querySelector("#WeeklyPickConfigPage").addEventListener("pageshow", function () {
                     Dashboard.showLoadingMsg();
+                    ApiClient.getJSON(ApiClient.getUrl("Users")).then(function (users) {
+                        allUsers = users || [];
+                        renderUserPicker();
+                    }).catch(function () {
+                        allUsers = [];
+                        renderUserPicker();
+                    });
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         document.querySelector("#Enabled").checked = !!config.Enabled;
                         entries = (config.Entries || []).slice();
@@ -256,6 +284,7 @@
                             if (!e.Id) { e.Id = newId(); }
                             if (!e.DateStart && e.WeekStart) { e.DateStart = e.WeekStart; e.DateEnd = e.WeekStart; }
                             if (!e.TimesToShow) { e.TimesToShow = 1; }
+                            if (!e.UserIds) { e.UserIds = []; }
                         });
                         render();
                         Dashboard.hideLoadingMsg();
@@ -285,6 +314,7 @@
                         Dashboard.alert("La fecha \"Hasta\" no puede ser anterior a \"Desde\".");
                         return;
                     }
+                    var userIds = Array.prototype.slice.call(document.querySelectorAll(".wpUserCheck:checked")).map(function (c) { return c.value; });
                     entries.push({
                         Id: newId(),
                         DateStart: dateStart,
@@ -292,12 +322,14 @@
                         TimesToShow: timesToShow,
                         Text: text,
                         ItemId: chosenItemId,
-                        ItemTitle: chosenItemTitle
+                        ItemTitle: chosenItemTitle,
+                        UserIds: userIds
                     });
                     document.querySelector("#NewDateStart").value = "";
                     document.querySelector("#NewDateEnd").value = "";
                     document.querySelector("#NewTimesToShow").value = "2";
                     document.querySelector("#NewText").value = "";
+                    document.querySelectorAll(".wpUserCheck:checked").forEach(function (c) { c.checked = false; });
                     setChosen("", "");
                     render();
                 });

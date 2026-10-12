@@ -70,6 +70,11 @@ public class SessionNotifier : IHostedService
 
             var today = now.ToString("yyyy-MM-dd");
             var userId = session.UserId.ToString("N");
+            if (!WeeklyPickController.IsTargeted(entry, userId))
+            {
+                return;
+            }
+
             var timesToShow = Math.Max(entry.TimesToShow, 1);
             if (!_store.ShouldShowToday(userId, entry.Id, timesToShow, today))
             {

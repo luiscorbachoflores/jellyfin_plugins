@@ -26,6 +26,10 @@ public class WeeklyEntry
     /// <summary>Cuántas veces se le muestra a cada usuario durante el rango (como máximo una
     /// vez por día, repartidas a lo largo de los días disponibles).</summary>
     public int TimesToShow { get; set; } = 2;
+
+    /// <summary>Ids de los usuarios a los que se les muestra. Vacía = todos los usuarios
+    /// habilitados (comportamiento por defecto, compatible con entradas antiguas).</summary>
+    public List<string> UserIds { get; set; } = new();
 }
 
 public class PluginConfiguration : BasePluginConfiguration
