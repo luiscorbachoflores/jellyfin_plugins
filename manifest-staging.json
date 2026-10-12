@@ -11,7 +11,7 @@
                 "version": "1.5.1.0",
                 "changelog": "Accesibilidad completa (foco, lectores de pantalla, TV con mando), limite de 2000 caracteres y anti-flood (10 por titulo, 30 por hora), id invalido de Jellyfin 10.11 ya no da 500, y la sesion se revalida justo antes de publicar/editar/borrar en vez de fiarse de una lectura unica al cargar la ficha.",
                 "targetAbi": "12.2.0.0",
-                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.5.1.0/Reviews.zip",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.5.1.0/Reviews_12.2.0.zip",
                 "checksum": "153b6fbca5925b004a52dd3b957eb5fc",
                 "timestamp": "2026-10-12T00:00:00Z"
             },
@@ -109,7 +109,7 @@
                 "version": "1.3.0.0",
                 "changelog": "Dock de botones flotantes accesible (foco, lectores de pantalla, TV con mando), cabecera Authorization en vez de X-Emby-Token, limite de 5 peticiones por minuto y 1000 caracteres.",
                 "targetAbi": "12.2.0.0",
-                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.3.0.0/JellyAsk.zip",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.3.0.0/JellyAsk_12.2.0.zip",
                 "checksum": "36d709964e233584aa469d1892cc4786",
                 "timestamp": "2026-10-12T00:00:00Z"
             },
@@ -175,7 +175,7 @@
                 "version": "1.0.1.0",
                 "changelog": "Un id que Jellyfin 10.11 no puede deserializar ya no tumba el lote entero, repintado de chips tras re-render, aria-label y tipografia heredada del tema.",
                 "targetAbi": "12.2.0.0",
-                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/languagebadges-v1.0.1.0/LanguageBadges.zip",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/languagebadges-v1.0.1.0/LanguageBadges_12.2.0.zip",
                 "checksum": "5f5188b452af3a2e7c2b75e39b7855f8",
                 "timestamp": "2026-10-12T00:00:00Z"
             },
@@ -201,7 +201,7 @@
                 "version": "1.0.1.0",
                 "changelog": "Middleware sin cuerpo parcial ante excepciones, recorte por lotes del registro, guarda busquedas pendientes al parar el servidor, valida la URL de prueba.",
                 "targetAbi": "12.2.0.0",
-                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/searchnotifier-v1.0.1.0/SearchNotifier.zip",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/searchnotifier-v1.0.1.0/SearchNotifier_12.2.0.zip",
                 "checksum": "6045bd44e8659aa7cb3c991530454419",
                 "timestamp": "2026-10-12T00:00:00Z"
             },
@@ -227,7 +227,7 @@
                 "version": "1.1.2.0",
                 "changelog": "Marca el aviso como visto solo despues de mostrarlo (antes se marcaba al pedirlo, aunque fallase el pintado), Reset solo para administradores, foco y recuperacion de foco accesibles en mando de TV.",
                 "targetAbi": "12.2.0.0",
-                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.1.2.0/WeeklyPick.zip",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.1.2.0/WeeklyPick2_12.2.0.zip",
                 "checksum": "b0d39e4372ff7d3306cd6a354cd8bcfd",
                 "timestamp": "2026-10-12T00:00:00Z"
             },
