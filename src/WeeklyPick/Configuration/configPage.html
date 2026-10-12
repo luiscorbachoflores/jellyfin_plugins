@@ -117,28 +117,58 @@
                     return "wp-" + Date.now() + "-" + Math.random().toString(16).slice(2);
                 }
 
+                var showDeleted = false;
+
                 function render() {
                     var list = document.querySelector("#EntriesList");
                     entries.sort(function (a, b) { return a.DateStart < b.DateStart ? -1 : 1; });
-                    if (!entries.length) {
-                        list.innerHTML = "<p style=\"opacity:.7\">No hay entradas todavía.</p>";
-                        return;
+                    var visible = entries.filter(function (e) { return !!e.Deleted === showDeleted; });
+                    var deletedCount = entries.filter(function (e) { return e.Deleted; }).length;
+
+                    var toggleLine = deletedCount
+                        ? "<p style=\"margin:.3em 0\"><a href=\"#\" id=\"ToggleDeletedLink\" style=\"opacity:.7\">" +
+                          (showDeleted ? "Ver entradas activas" : "Ver borradas (" + deletedCount + ")") + "</a></p>"
+                        : "";
+
+                    if (!visible.length) {
+                        list.innerHTML = toggleLine + "<p style=\"opacity:.7\">" + (showDeleted ? "No hay entradas borradas." : "No hay entradas todavía.") + "</p>";
+                    } else {
+                        list.innerHTML = toggleLine + visible.map(function (e) {
+                            var who = e.ItemTitle ? (" <em>(" + esc(e.ItemTitle) + ")</em>") : (e.ItemId ? " <em>(con ficha)</em>" : "");
+                            var forWhom = (e.UserIds && e.UserIds.length)
+                                ? e.UserIds.length + " usuario" + (e.UserIds.length === 1 ? "" : "s")
+                                : "todos";
+                            var actionBtn = showDeleted
+                                ? "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-restore-id=\"" + esc(e.Id) + "\">Restaurar</button>"
+                                : "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-stats-id=\"" + esc(e.Id) + "\">Ver quién la ha visto</button>" +
+                                  "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-delete-id=\"" + esc(e.Id) + "\">Borrar</button>";
+                            return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(255,255,255,.1)\">" +
+                                "<strong style=\"min-width:11em\">" + esc(e.DateStart) + " &rarr; " + esc(e.DateEnd) + "</strong>" +
+                                "<span style=\"flex:1\">" + esc(e.Text) + who + " <span style=\"opacity:.6\">(" + esc(e.TimesToShow) + "x · " + esc(forWhom) + ")</span></span>" +
+                                actionBtn +
+                                "</div>";
+                        }).join("");
                     }
-                    list.innerHTML = entries.map(function (e, i) {
-                        var who = e.ItemTitle ? (" <em>(" + esc(e.ItemTitle) + ")</em>") : (e.ItemId ? " <em>(con ficha)</em>" : "");
-                        var forWhom = (e.UserIds && e.UserIds.length)
-                            ? e.UserIds.length + " usuario" + (e.UserIds.length === 1 ? "" : "s")
-                            : "todos";
-                        return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(255,255,255,.1)\">" +
-                            "<strong style=\"min-width:11em\">" + esc(e.DateStart) + " &rarr; " + esc(e.DateEnd) + "</strong>" +
-                            "<span style=\"flex:1\">" + esc(e.Text) + who + " <span style=\"opacity:.6\">(" + esc(e.TimesToShow) + "x · " + esc(forWhom) + ")</span></span>" +
-                            "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-stats-id=\"" + esc(e.Id) + "\">Ver quién la ha visto</button>" +
-                            "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-idx=\"" + i + "\">Borrar</button>" +
-                            "</div>";
-                    }).join("");
-                    list.querySelectorAll("button[data-idx]").forEach(function (btn) {
+
+                    var toggleLink = document.querySelector("#ToggleDeletedLink");
+                    if (toggleLink) {
+                        toggleLink.addEventListener("click", function (evt) {
+                            evt.preventDefault();
+                            showDeleted = !showDeleted;
+                            render();
+                        });
+                    }
+                    list.querySelectorAll("button[data-delete-id]").forEach(function (btn) {
                         btn.addEventListener("click", function () {
-                            entries.splice(parseInt(btn.getAttribute("data-idx"), 10), 1);
+                            var e = entries.find(function (x) { return x.Id === btn.getAttribute("data-delete-id"); });
+                            if (e) { e.Deleted = true; }
+                            render();
+                        });
+                    });
+                    list.querySelectorAll("button[data-restore-id]").forEach(function (btn) {
+                        btn.addEventListener("click", function () {
+                            var e = entries.find(function (x) { return x.Id === btn.getAttribute("data-restore-id"); });
+                            if (e) { e.Deleted = false; }
                             render();
                         });
                     });

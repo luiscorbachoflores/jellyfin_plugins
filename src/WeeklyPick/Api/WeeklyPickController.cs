@@ -35,7 +35,8 @@ public class WeeklyPickController : ControllerBase
     {
         var today = Today(now);
         return config.Entries
-            .Where(e => !string.IsNullOrWhiteSpace(e.DateStart) && !string.IsNullOrWhiteSpace(e.DateEnd)
+            .Where(e => !e.Deleted
+                        && !string.IsNullOrWhiteSpace(e.DateStart) && !string.IsNullOrWhiteSpace(e.DateEnd)
                         && string.CompareOrdinal(e.DateStart, today) <= 0
                         && string.CompareOrdinal(today, e.DateEnd) <= 0)
             .OrderByDescending(e => e.DateStart, StringComparer.Ordinal)

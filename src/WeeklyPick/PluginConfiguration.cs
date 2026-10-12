@@ -30,6 +30,10 @@ public class WeeklyEntry
     /// <summary>Ids de los usuarios a los que se les muestra. Vacía = todos los usuarios
     /// habilitados (comportamiento por defecto, compatible con entradas antiguas).</summary>
     public List<string> UserIds { get; set; } = new();
+
+    /// <summary>Borrado lógico: no se enseña en el panel ni se le muestra a nadie, pero sigue
+    /// en la configuración (se puede restaurar) y sus estadísticas no se pierden.</summary>
+    public bool Deleted { get; set; }
 }
 
 public class PluginConfiguration : BasePluginConfiguration
