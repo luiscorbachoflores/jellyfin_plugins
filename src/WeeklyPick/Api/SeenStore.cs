@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using MediaBrowser.Common.Configuration;
 
 namespace Jellyfin.Plugin.WeeklyPick.Api;
 
-/// <summary>Estado por usuario de la recomendación de la semana actual: si se le ha
-/// mostrado, si ha pulsado "Ver ficha" y si la ha cerrado sin acceder. Solo guarda la
-/// semana más reciente de cada usuario (no un historial completo); al cambiar de semana
-/// el registro anterior de ese usuario se considera obsoleto y se trata como "sin ver".</summary>
+/// <summary>Historial por usuario y por entrada (no por semana: cada entrada cubre el rango
+/// de días que el admin le haya puesto) de cuántas veces se le ha mostrado, si ha pulsado
+/// "Ver ficha" y si la ha cerrado sin acceder. Guarda TODAS las entradas, para poder revisar
+/// quién vio una recomendación antigua. Clave interna: "userId|entryId".</summary>
 public class SeenStore
 {
     private readonly string _path;
@@ -19,16 +20,22 @@ public class SeenStore
     {
         var dir = Path.Combine(applicationPaths.DataPath, "weeklypick");
         Directory.CreateDirectory(dir);
-        _path = Path.Combine(dir, "seen.v2.json");
+        _path = Path.Combine(dir, "seen.v4.json");
     }
 
-    public class UserWeekState
+    public class UserEntryState
     {
-        public string Week { get; set; } = string.Empty;
+        public string EntryId { get; set; } = string.Empty;
 
-        public bool Shown { get; set; }
+        public int ShowCount { get; set; }
 
-        public DateTime? ShownAtUtc { get; set; }
+        public DateTime? FirstShownAtUtc { get; set; }
+
+        public DateTime? LastShownAtUtc { get; set; }
+
+        /// <summary>Fecha (yyyy-MM-dd, hora local del servidor) del último aviso, para no
+        /// mostrarlo más de una vez el mismo día.</summary>
+        public string LastShownDate { get; set; } = string.Empty;
 
         public bool Clicked { get; set; }
 
@@ -39,108 +46,124 @@ public class SeenStore
         public DateTime? DismissedAtUtc { get; set; }
     }
 
-    private Dictionary<string, UserWeekState> Load()
+    private static string Key(string userId, string entryId) => userId + "|" + entryId;
+
+    private Dictionary<string, UserEntryState> Load()
     {
         if (!File.Exists(_path))
         {
-            return new Dictionary<string, UserWeekState>();
+            return new Dictionary<string, UserEntryState>();
         }
 
         try
         {
             var json = File.ReadAllText(_path);
-            return JsonSerializer.Deserialize<Dictionary<string, UserWeekState>>(json) ?? new Dictionary<string, UserWeekState>();
+            return JsonSerializer.Deserialize<Dictionary<string, UserEntryState>>(json) ?? new Dictionary<string, UserEntryState>();
         }
         catch (JsonException)
         {
             // Formato antiguo o corrupto: no es dato real del usuario, solo cache de "quién
-            // ha visto ya el aviso esta semana". Se descarta y se empieza de cero.
-            return new Dictionary<string, UserWeekState>();
+            // ha visto el aviso". Se descarta y se empieza de cero.
+            return new Dictionary<string, UserEntryState>();
         }
     }
 
-    private void Save(Dictionary<string, UserWeekState> data)
+    private void Save(Dictionary<string, UserEntryState> data)
     {
         File.WriteAllText(_path, JsonSerializer.Serialize(data));
     }
 
-    private static UserWeekState FreshFor(string weekKey)
-    {
-        return new UserWeekState { Week = weekKey };
-    }
-
-    public bool WasNotifiedThisWeek(string userId, string weekKey)
+    /// <summary>Si todavía le queda alguna vez por mostrarse hoy a este usuario para esta
+    /// entrada: no se le ha mostrado ya hoy, y no ha alcanzado el máximo de veces.</summary>
+    public bool ShouldShowToday(string userId, string entryId, int timesToShow, string todayDate)
     {
         lock (_lock)
         {
             var data = Load();
-            return data.TryGetValue(userId, out var state) && state.Week == weekKey && state.Shown;
+            if (!data.TryGetValue(Key(userId, entryId), out var state))
+            {
+                return timesToShow > 0;
+            }
+
+            if (state.LastShownDate == todayDate)
+            {
+                return false;
+            }
+
+            return state.ShowCount < timesToShow;
         }
     }
 
-    public void MarkShown(string userId, string weekKey)
+    public void MarkShown(string userId, string entryId, string todayDate)
     {
         lock (_lock)
         {
             var data = Load();
-            if (!data.TryGetValue(userId, out var state) || state.Week != weekKey)
+            var key = Key(userId, entryId);
+            if (!data.TryGetValue(key, out var state))
             {
-                state = FreshFor(weekKey);
+                state = new UserEntryState { EntryId = entryId };
             }
 
-            state.Shown = true;
-            state.ShownAtUtc = DateTime.UtcNow;
-            data[userId] = state;
+            state.ShowCount += 1;
+            state.LastShownDate = todayDate;
+            state.LastShownAtUtc = DateTime.UtcNow;
+            state.FirstShownAtUtc ??= DateTime.UtcNow;
+            data[key] = state;
             Save(data);
         }
     }
 
-    public void MarkClicked(string userId, string weekKey)
+    public void MarkClicked(string userId, string entryId)
     {
         lock (_lock)
         {
             var data = Load();
-            if (!data.TryGetValue(userId, out var state) || state.Week != weekKey)
+            var key = Key(userId, entryId);
+            if (!data.TryGetValue(key, out var state))
             {
-                state = FreshFor(weekKey);
+                state = new UserEntryState { EntryId = entryId };
             }
 
             state.Clicked = true;
             state.ClickedAtUtc = DateTime.UtcNow;
-            data[userId] = state;
+            data[key] = state;
             Save(data);
         }
     }
 
-    public void MarkDismissed(string userId, string weekKey)
+    public void MarkDismissed(string userId, string entryId)
     {
         lock (_lock)
         {
             var data = Load();
-            if (!data.TryGetValue(userId, out var state) || state.Week != weekKey)
+            var key = Key(userId, entryId);
+            if (!data.TryGetValue(key, out var state))
             {
-                state = FreshFor(weekKey);
+                state = new UserEntryState { EntryId = entryId };
             }
 
             state.Dismissed = true;
             state.DismissedAtUtc = DateTime.UtcNow;
-            data[userId] = state;
+            data[key] = state;
             Save(data);
         }
     }
 
-    /// <summary>Estado de cada usuario para esa semana concreta (null si nunca se le ha
-    /// mostrado nada esta semana, aunque exista en Jellyfin).</summary>
-    public IReadOnlyDictionary<string, UserWeekState> StatesForWeek(string weekKey)
+    /// <summary>Estado de cada usuario para una entrada concreta (los que no aparecen nunca
+    /// se les mostró nada de esa entrada, aunque existan en Jellyfin). Sirve tanto para la
+    /// entrada activa hoy como para revisar una antigua.</summary>
+    public IReadOnlyDictionary<string, UserEntryState> StatesForEntry(string entryId)
     {
         lock (_lock)
         {
             var data = Load();
-            var result = new Dictionary<string, UserWeekState>();
-            foreach (var (userId, state) in data)
+            var result = new Dictionary<string, UserEntryState>();
+            foreach (var (key, state) in data)
             {
-                if (state.Week == weekKey)
+                if (state.EntryId == entryId)
                 {
+                    var userId = key.Substring(0, key.Length - entryId.Length - 1);
                     result[userId] = state;
                 }
             }
@@ -149,14 +172,19 @@ public class SeenStore
         }
     }
 
-    public void Clear()
+    /// <summary>Olvida solo lo registrado para esta entrada (p. ej. la activa, para forzar
+    /// que vuelva a aparecer), sin tocar el historial de otras entradas.</summary>
+    public void ClearEntry(string entryId)
     {
         lock (_lock)
         {
-            if (File.Exists(_path))
+            var data = Load();
+            foreach (var key in data.Where(kv => kv.Value.EntryId == entryId).Select(kv => kv.Key).ToList())
             {
-                File.Delete(_path);
+                data.Remove(key);
             }
+
+            Save(data);
         }
     }
 }

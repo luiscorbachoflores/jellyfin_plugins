@@ -26,29 +26,20 @@ public class WeeklyPickController : ControllerBase
         _store = store;
     }
 
-    /// <summary>Viernes mas reciente en o antes de <paramref name="now"/>, como clave "yyyy-MM-dd".
-    /// Define el "cubo" semanal: se reinicia cada viernes.</summary>
-    internal static string CurrentWeekKey(DateTime now)
-    {
-        var diff = ((int)now.DayOfWeek - (int)DayOfWeek.Friday + 7) % 7;
-        return now.Date.AddDays(-diff).ToString("yyyy-MM-dd");
-    }
+    private static string Today(DateTime now) => now.ToString("yyyy-MM-dd");
 
-    /// <summary>La entrada configurada para esa semana (cualquier fecha dentro de la semana vale,
-    /// se normaliza al viernes que la abre), o null si no hay ninguna.</summary>
-    internal static WeeklyEntry? EntryFor(PluginConfiguration config, string weekKey)
+    /// <summary>La entrada cuyo rango [DateStart, DateEnd] incluye <paramref name="now"/>, o
+    /// null si ninguna cubre ese día. Si hubiera rangos solapados (no debería, pero el admin
+    /// podría crearlos), se queda con la más reciente por DateStart.</summary>
+    internal static WeeklyEntry? EntryForDate(PluginConfiguration config, DateTime now)
     {
-        return config.Entries.FirstOrDefault(e => NormalizeToWeekKey(e.WeekStart) == weekKey);
-    }
-
-    internal static string NormalizeToWeekKey(string anyDateInWeek)
-    {
-        if (!DateTime.TryParse(anyDateInWeek, out var d))
-        {
-            return string.Empty;
-        }
-
-        return CurrentWeekKey(d);
+        var today = Today(now);
+        return config.Entries
+            .Where(e => !string.IsNullOrWhiteSpace(e.DateStart) && !string.IsNullOrWhiteSpace(e.DateEnd)
+                        && string.CompareOrdinal(e.DateStart, today) <= 0
+                        && string.CompareOrdinal(today, e.DateEnd) <= 0)
+            .OrderByDescending(e => e.DateStart, StringComparer.Ordinal)
+            .FirstOrDefault();
     }
 
     private static async Task<(bool IsAdmin, bool IsAuthenticated)> CheckAdmin(IAuthorizationContext authorizationContext, HttpRequest request)
@@ -91,15 +82,15 @@ public class WeeklyPickController : ControllerBase
             return Ok(new WeeklyPickResponseDto { Show = false });
         }
 
-        var weekKey = CurrentWeekKey(DateTime.Now);
-        var entry = EntryFor(config, weekKey);
-        if (entry is null || string.IsNullOrWhiteSpace(entry.Text))
+        var now = DateTime.Now;
+        var entry = EntryForDate(config, now);
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Text) || string.IsNullOrWhiteSpace(entry.Id))
         {
             return Ok(new WeeklyPickResponseDto { Show = false });
         }
 
         var userId = authInfo.UserId.ToString("N");
-        if (_store.WasNotifiedThisWeek(userId, weekKey))
+        if (!_store.ShouldShowToday(userId, entry.Id, Math.Max(entry.TimesToShow, 1), Today(now)))
         {
             return Ok(new WeeklyPickResponseDto { Show = false });
         }
@@ -125,13 +116,18 @@ public class WeeklyPickController : ControllerBase
             return Unauthorized();
         }
 
-        var userId = authInfo.UserId.ToString("N");
-        var weekKey = CurrentWeekKey(DateTime.Now);
-        _store.MarkShown(userId, weekKey);
+        var now = DateTime.Now;
+        var entry = EntryForDate(Plugin.Instance!.Configuration, now);
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Id))
+        {
+            return Ok();
+        }
+
+        _store.MarkShown(authInfo.UserId.ToString("N"), entry.Id, Today(now));
         return Ok();
     }
 
-    /// <summary>El usuario ha pulsado "Ver ficha" en el aviso de esta semana.</summary>
+    /// <summary>El usuario ha pulsado "Ver ficha" en el aviso activo hoy.</summary>
     [HttpPost("Click")]
     public async Task<ActionResult> PostClick()
     {
@@ -141,13 +137,17 @@ public class WeeklyPickController : ControllerBase
             return Unauthorized();
         }
 
-        var userId = authInfo.UserId.ToString("N");
-        var weekKey = CurrentWeekKey(DateTime.Now);
-        _store.MarkClicked(userId, weekKey);
+        var entry = EntryForDate(Plugin.Instance!.Configuration, DateTime.Now);
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Id))
+        {
+            return Ok();
+        }
+
+        _store.MarkClicked(authInfo.UserId.ToString("N"), entry.Id);
         return Ok();
     }
 
-    /// <summary>El usuario ha cerrado el aviso de esta semana sin pulsar "Ver ficha".</summary>
+    /// <summary>El usuario ha cerrado el aviso activo hoy sin pulsar "Ver ficha".</summary>
     [HttpPost("Dismiss")]
     public async Task<ActionResult> PostDismiss()
     {
@@ -157,15 +157,20 @@ public class WeeklyPickController : ControllerBase
             return Unauthorized();
         }
 
-        var userId = authInfo.UserId.ToString("N");
-        var weekKey = CurrentWeekKey(DateTime.Now);
-        _store.MarkDismissed(userId, weekKey);
+        var entry = EntryForDate(Plugin.Instance!.Configuration, DateTime.Now);
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Id))
+        {
+            return Ok();
+        }
+
+        _store.MarkDismissed(authInfo.UserId.ToString("N"), entry.Id);
         return Ok();
     }
 
-    /// <summary>Quién ha visto, accedido o descartado la recomendación de esta semana. Solo admin.</summary>
+    /// <summary>Quién ha visto, accedido o descartado una entrada concreta (la activa hoy, u
+    /// otra antigua pasando su Id). Solo admin.</summary>
     [HttpGet("Stats")]
-    public async Task<ActionResult<List<WeeklyPickStatRowDto>>> GetStats()
+    public async Task<ActionResult<List<WeeklyPickStatRowDto>>> GetStats([FromQuery] string? entryId)
     {
         var (isAdmin, isAuthenticated) = await CheckAdmin(_authorizationContext, Request).ConfigureAwait(false);
         if (!isAuthenticated || !isAdmin)
@@ -173,8 +178,12 @@ public class WeeklyPickController : ControllerBase
             return Unauthorized();
         }
 
-        var weekKey = CurrentWeekKey(DateTime.Now);
-        var states = _store.StatesForWeek(weekKey);
+        if (string.IsNullOrWhiteSpace(entryId))
+        {
+            return Ok(new List<WeeklyPickStatRowDto>());
+        }
+
+        var states = _store.StatesForEntry(entryId);
 
         var rows = _userManager.GetUsers()
             .Where(u => !u.Permissions.Any(p => p.Kind == Jellyfin.Database.Implementations.Enums.PermissionKind.IsDisabled && p.Value))
@@ -185,23 +194,25 @@ public class WeeklyPickController : ControllerBase
                 return new WeeklyPickStatRowDto
                 {
                     UserName = u.Username,
-                    Shown = state?.Shown ?? false,
-                    ShownAtUtc = state?.ShownAtUtc,
+                    ShowCount = state?.ShowCount ?? 0,
+                    LastShownAtUtc = state?.LastShownAtUtc,
                     Clicked = state?.Clicked ?? false,
                     ClickedAtUtc = state?.ClickedAtUtc,
                     Dismissed = state?.Dismissed ?? false,
                     DismissedAtUtc = state?.DismissedAtUtc,
                 };
             })
-            .OrderByDescending(r => r.Shown)
+            .OrderByDescending(r => r.ShowCount)
             .ThenBy(r => r.UserName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return Ok(rows);
     }
 
+    /// <summary>Olvida lo visto de una entrada concreta (por defecto la activa hoy), para que
+    /// vuelva a aparecer. No toca el historial de otras entradas.</summary>
     [HttpPost("Reset")]
-    public async Task<ActionResult> PostReset()
+    public async Task<ActionResult> PostReset([FromQuery] string? entryId)
     {
         var (isAdmin, isAuthenticated) = await CheckAdmin(_authorizationContext, Request).ConfigureAwait(false);
         if (!isAuthenticated || !isAdmin)
@@ -209,7 +220,19 @@ public class WeeklyPickController : ControllerBase
             return Unauthorized();
         }
 
-        _store.Clear();
+        var targetId = entryId;
+        if (string.IsNullOrWhiteSpace(targetId))
+        {
+            var entry = EntryForDate(Plugin.Instance!.Configuration, DateTime.Now);
+            targetId = entry?.Id;
+        }
+
+        if (string.IsNullOrWhiteSpace(targetId))
+        {
+            return Ok();
+        }
+
+        _store.ClearEntry(targetId);
         return Ok();
     }
 }
@@ -227,9 +250,9 @@ public class WeeklyPickStatRowDto
 {
     public string UserName { get; set; } = string.Empty;
 
-    public bool Shown { get; set; }
+    public int ShowCount { get; set; }
 
-    public DateTime? ShownAtUtc { get; set; }
+    public DateTime? LastShownAtUtc { get; set; }
 
     public bool Clicked { get; set; }
 

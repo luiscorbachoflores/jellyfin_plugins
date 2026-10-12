@@ -5,8 +5,15 @@ namespace Jellyfin.Plugin.WeeklyPick;
 
 public class WeeklyEntry
 {
-    /// <summary>El viernes (yyyy-MM-dd) que abre la semana de esta entrada.</summary>
-    public string WeekStart { get; set; } = string.Empty;
+    /// <summary>Identificador estable de la entrada (independiente de las fechas, para poder
+    /// consultar sus estadísticas aunque luego se edite el rango). Generado por el cliente.</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Primer día (incluido) en que se muestra, yyyy-MM-dd.</summary>
+    public string DateStart { get; set; } = string.Empty;
+
+    /// <summary>Último día (incluido) en que se muestra, yyyy-MM-dd.</summary>
+    public string DateEnd { get; set; } = string.Empty;
 
     public string Text { get; set; } = string.Empty;
 
@@ -15,6 +22,10 @@ public class WeeklyEntry
     /// <summary>Título mostrado en el listado de entradas, guardado al elegirlo en el buscador
     /// (puramente informativo para el admin; la recomendación en sí solo usa ItemId).</summary>
     public string ItemTitle { get; set; } = string.Empty;
+
+    /// <summary>Cuántas veces se le muestra a cada usuario durante el rango (como máximo una
+    /// vez por día, repartidas a lo largo de los días disponibles).</summary>
+    public int TimesToShow { get; set; } = 2;
 }
 
 public class PluginConfiguration : BasePluginConfiguration

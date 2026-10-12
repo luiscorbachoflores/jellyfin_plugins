@@ -61,15 +61,17 @@ public class SessionNotifier : IHostedService
                 return;
             }
 
-            var weekKey = Jellyfin.Plugin.WeeklyPick.Api.WeeklyPickController.CurrentWeekKey(DateTime.Now);
-            var entry = Jellyfin.Plugin.WeeklyPick.Api.WeeklyPickController.EntryFor(config, weekKey);
-            if (entry is null || string.IsNullOrWhiteSpace(entry.Text))
+            var now = DateTime.Now;
+            var entry = WeeklyPickController.EntryForDate(config, now);
+            if (entry is null || string.IsNullOrWhiteSpace(entry.Text) || string.IsNullOrWhiteSpace(entry.Id))
             {
                 return;
             }
 
+            var today = now.ToString("yyyy-MM-dd");
             var userId = session.UserId.ToString("N");
-            if (_store.WasNotifiedThisWeek(userId, weekKey))
+            var timesToShow = Math.Max(entry.TimesToShow, 1);
+            if (!_store.ShouldShowToday(userId, entry.Id, timesToShow, today))
             {
                 return;
             }
@@ -81,12 +83,12 @@ public class SessionNotifier : IHostedService
             {
                 if (session.SessionControllers.Count > 0)
                 {
-                    if (_store.WasNotifiedThisWeek(userId, weekKey))
+                    if (!_store.ShouldShowToday(userId, entry.Id, timesToShow, today))
                     {
                         return;
                     }
 
-                    _store.MarkShown(userId, weekKey);
+                    _store.MarkShown(userId, entry.Id, today);
                     _logger.LogInformation("WeeklyPick: aviso nativo a cliente {Client} (sesion {Session}).", clientName, session.Id);
                     await _sessionManager.SendMessageCommand(
                         session.Id,

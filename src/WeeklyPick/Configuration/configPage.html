@@ -9,7 +9,7 @@
             <div class="content-primary">
                 <div class="verticalSection">
                     <h2>Recomendación Semanal</h2>
-                    <p>Aviso emergente que ve cada usuario una vez por semana (el cubo se reinicia todos los viernes), con una entrada distinta por semana — puedes dejarlas preparadas con antelación.</p>
+                    <p>Aviso emergente con una recomendación personal. Cada entrada cubre un rango de días a tu elección; durante esos días, cada usuario la ve hasta el número de veces que indiques (como máximo una vez al día).</p>
                 </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label>
@@ -19,15 +19,25 @@
                 </div>
 
                 <div class="verticalSection">
-                    <h3>Próximas entradas</h3>
+                    <h3>Entradas</h3>
                     <div id="EntriesList"></div>
                 </div>
 
                 <div class="verticalSection">
                     <h3>Añadir entrada</h3>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="NewWeek">Semana (cualquier día de esa semana; se ajusta sola al viernes)</label>
-                        <input is="emby-input" type="date" id="NewWeek" />
+                    <div style="display:flex;gap:1em;flex-wrap:wrap">
+                        <div class="inputContainer" style="flex:1;min-width:10em">
+                            <label class="inputLabel inputLabelUnfocused" for="NewDateStart">Desde</label>
+                            <input is="emby-input" type="date" id="NewDateStart" />
+                        </div>
+                        <div class="inputContainer" style="flex:1;min-width:10em">
+                            <label class="inputLabel inputLabelUnfocused" for="NewDateEnd">Hasta</label>
+                            <input is="emby-input" type="date" id="NewDateEnd" />
+                        </div>
+                        <div class="inputContainer" style="flex:1;min-width:10em">
+                            <label class="inputLabel inputLabelUnfocused" for="NewTimesToShow">Veces a mostrar en ese rango</label>
+                            <input is="emby-input" type="number" id="NewTimesToShow" min="1" max="20" value="2" />
+                        </div>
                     </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="NewText" style="display:block;margin-bottom:.4em;">Texto de la recomendación</label>
@@ -52,20 +62,19 @@
                     <button is="emby-button" type="button" id="BtnSave" class="raised button-submit block">
                         <span>Guardar todo</span>
                     </button>
-                    <button is="emby-button" type="button" id="BtnReset" class="raised block">
-                        <span>Forzar reaparición ahora (olvida quién ha visto ya la de esta semana)</span>
-                    </button>
                 </div>
 
                 <div class="verticalSection" style="margin-top:2em">
                     <div style="display:flex;align-items:center;gap:.6em;flex-wrap:wrap">
-                        <h3 style="margin:0">Quién ha visto la de esta semana</h3>
+                        <h3 style="margin:0" id="StatsTitle">Quién la ha visto</h3>
                         <button is="emby-button" type="button" id="BtnStatsRefresh" class="raised">Actualizar</button>
+                        <button is="emby-button" type="button" id="BtnStatsReset" class="raised">Olvidar vistos (reaparece)</button>
                     </div>
+                    <p id="StatsHint" style="opacity:.7;margin:.3em 0 0">Elige una entrada de la lista de arriba con "Ver quién la ha visto".</p>
                     <div style="overflow-x:auto;margin-top:.6em">
                         <table id="StatsTable" style="width:100%;border-collapse:collapse;text-align:left">
                             <thead>
-                                <tr><th style="padding:.4em">Usuario</th><th style="padding:.4em">Visto</th><th style="padding:.4em">Ha accedido</th><th style="padding:.4em">Ha cerrado sin ver</th></tr>
+                                <tr><th style="padding:.4em">Usuario</th><th style="padding:.4em">Veces mostrada</th><th style="padding:.4em">Ha accedido</th><th style="padding:.4em">Ha cerrado sin ver</th></tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -79,6 +88,7 @@
                 var entries = [];
                 var chosenItemId = "";
                 var chosenItemTitle = "";
+                var selectedEntryId = "";
 
                 function esc(s) {
                     var d = document.createElement("div");
@@ -86,17 +96,16 @@
                     return d.innerHTML;
                 }
 
-                function fridayOf(dateStr) {
-                    var d = new Date(dateStr + "T00:00:00");
-                    var diff = (d.getDay() - 5 + 7) % 7;
-                    d.setDate(d.getDate() - diff);
-                    var mm = ("0" + (d.getMonth() + 1)).slice(-2), dd = ("0" + d.getDate()).slice(-2);
-                    return d.getFullYear() + "-" + mm + "-" + dd;
+                function newId() {
+                    if (window.crypto && window.crypto.randomUUID) {
+                        return window.crypto.randomUUID();
+                    }
+                    return "wp-" + Date.now() + "-" + Math.random().toString(16).slice(2);
                 }
 
                 function render() {
                     var list = document.querySelector("#EntriesList");
-                    entries.sort(function (a, b) { return a.WeekStart < b.WeekStart ? -1 : 1; });
+                    entries.sort(function (a, b) { return a.DateStart < b.DateStart ? -1 : 1; });
                     if (!entries.length) {
                         list.innerHTML = "<p style=\"opacity:.7\">No hay entradas todavía.</p>";
                         return;
@@ -104,8 +113,9 @@
                     list.innerHTML = entries.map(function (e, i) {
                         var who = e.ItemTitle ? (" <em>(" + esc(e.ItemTitle) + ")</em>") : (e.ItemId ? " <em>(con ficha)</em>" : "");
                         return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(255,255,255,.1)\">" +
-                            "<strong style=\"min-width:7em\">" + esc(e.WeekStart) + "</strong>" +
-                            "<span style=\"flex:1\">" + esc(e.Text) + who + "</span>" +
+                            "<strong style=\"min-width:11em\">" + esc(e.DateStart) + " &rarr; " + esc(e.DateEnd) + "</strong>" +
+                            "<span style=\"flex:1\">" + esc(e.Text) + who + " <span style=\"opacity:.6\">(" + esc(e.TimesToShow) + "x)</span></span>" +
+                            "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-stats-id=\"" + esc(e.Id) + "\">Ver quién la ha visto</button>" +
                             "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-idx=\"" + i + "\">Borrar</button>" +
                             "</div>";
                     }).join("");
@@ -115,6 +125,20 @@
                             render();
                         });
                     });
+                    list.querySelectorAll("button[data-stats-id]").forEach(function (btn) {
+                        btn.addEventListener("click", function () {
+                            var e = entries.find(function (x) { return x.Id === btn.getAttribute("data-stats-id"); });
+                            selectEntry(btn.getAttribute("data-stats-id"), e);
+                        });
+                    });
+                }
+
+                function selectEntry(id, entry) {
+                    selectedEntryId = id;
+                    var title = entry ? (entry.DateStart + " → " + entry.DateEnd + (entry.ItemTitle ? " (" + entry.ItemTitle + ")" : "")) : id;
+                    document.querySelector("#StatsTitle").textContent = "Quién ha visto: " + title;
+                    document.querySelector("#StatsHint").style.display = "none";
+                    loadStats();
                 }
 
                 function setChosen(id, title) {
@@ -176,8 +200,12 @@
 
                 function loadStats() {
                     var tbody = document.querySelector("#StatsTable tbody");
+                    if (!selectedEntryId) {
+                        tbody.innerHTML = "";
+                        return;
+                    }
                     tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">Cargando...</td></tr>";
-                    ApiClient.getJSON(ApiClient.getUrl("WeeklyPick/Stats")).then(function (rows) {
+                    ApiClient.getJSON(ApiClient.getUrl("WeeklyPick/Stats", { entryId: selectedEntryId })).then(function (rows) {
                         if (!rows.length) {
                             tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">No hay usuarios.</td></tr>";
                             return;
@@ -186,7 +214,7 @@
                         tbody.innerHTML = rows.map(function (r) {
                             return "<tr style=\"border-top:1px solid rgba(128,128,128,.25)\">" +
                                 "<td style=\"padding:.4em\">" + esc(r.UserName) + "</td>" +
-                                "<td style=\"padding:.4em\">" + mark(r.Shown) + "</td>" +
+                                "<td style=\"padding:.4em\">" + esc(r.ShowCount) + "</td>" +
                                 "<td style=\"padding:.4em\">" + mark(r.Clicked) + "</td>" +
                                 "<td style=\"padding:.4em\">" + mark(r.Dismissed) + "</td></tr>";
                         }).join("");
@@ -200,10 +228,15 @@
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         document.querySelector("#Enabled").checked = !!config.Enabled;
                         entries = (config.Entries || []).slice();
+                        // Compatibilidad con entradas antiguas (semana unica) que no tengan Id/rango todavia.
+                        entries.forEach(function (e) {
+                            if (!e.Id) { e.Id = newId(); }
+                            if (!e.DateStart && e.WeekStart) { e.DateStart = e.WeekStart; e.DateEnd = e.WeekStart; }
+                            if (!e.TimesToShow) { e.TimesToShow = 1; }
+                        });
                         render();
                         Dashboard.hideLoadingMsg();
                     });
-                    loadStats();
                 });
 
                 document.querySelector("#NewItemSearch").addEventListener("input", function (e) {
@@ -217,14 +250,30 @@
                 });
 
                 document.querySelector("#BtnAdd").addEventListener("click", function () {
-                    var week = document.querySelector("#NewWeek").value;
+                    var dateStart = document.querySelector("#NewDateStart").value;
+                    var dateEnd = document.querySelector("#NewDateEnd").value;
+                    var timesToShow = parseInt(document.querySelector("#NewTimesToShow").value, 10) || 2;
                     var text = document.querySelector("#NewText").value.trim();
-                    if (!week || !text) {
-                        Dashboard.alert("Rellena al menos la semana y el texto.");
+                    if (!dateStart || !dateEnd || !text) {
+                        Dashboard.alert("Rellena al menos las fechas y el texto.");
                         return;
                     }
-                    entries.push({ WeekStart: fridayOf(week), Text: text, ItemId: chosenItemId, ItemTitle: chosenItemTitle });
-                    document.querySelector("#NewWeek").value = "";
+                    if (dateEnd < dateStart) {
+                        Dashboard.alert("La fecha \"Hasta\" no puede ser anterior a \"Desde\".");
+                        return;
+                    }
+                    entries.push({
+                        Id: newId(),
+                        DateStart: dateStart,
+                        DateEnd: dateEnd,
+                        TimesToShow: timesToShow,
+                        Text: text,
+                        ItemId: chosenItemId,
+                        ItemTitle: chosenItemTitle
+                    });
+                    document.querySelector("#NewDateStart").value = "";
+                    document.querySelector("#NewDateEnd").value = "";
+                    document.querySelector("#NewTimesToShow").value = "2";
                     document.querySelector("#NewText").value = "";
                     setChosen("", "");
                     render();
@@ -241,16 +290,22 @@
                     });
                 });
 
-                document.querySelector("#BtnReset").addEventListener("click", function () {
+                document.querySelector("#BtnStatsRefresh").addEventListener("click", loadStats);
+
+                document.querySelector("#BtnStatsReset").addEventListener("click", function () {
+                    if (!selectedEntryId) {
+                        Dashboard.alert("Elige antes una entrada con \"Ver quién la ha visto\".");
+                        return;
+                    }
+                    if (!confirm("¿Olvidar a quién se le ha mostrado esta entrada? Volverá a aparecer.")) {
+                        return;
+                    }
                     Dashboard.showLoadingMsg();
-                    ApiClient.ajax({ type: "POST", url: ApiClient.getUrl("WeeklyPick/Reset") }).then(function () {
+                    ApiClient.ajax({ type: "POST", url: ApiClient.getUrl("WeeklyPick/Reset", { entryId: selectedEntryId }) }).then(function () {
                         Dashboard.hideLoadingMsg();
-                        Dashboard.alert("Hecho: todos volverán a verla si hay entrada para la semana actual.");
                         loadStats();
                     });
                 });
-
-                document.querySelector("#BtnStatsRefresh").addEventListener("click", loadStats);
             })();
         </script>
     </div>
