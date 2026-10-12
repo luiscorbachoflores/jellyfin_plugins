@@ -224,6 +224,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.2.0.0",
+                "changelog": "Buscador de peliculas/series por nombre para elegir la recomendacion (en vez de pegar el Id a mano). Panel con quien ha visto, accedido o cerrado sin ver el aviso de cada semana.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.2.0.0/WeeklyPick_1.2.0.0.zip",
+                "checksum": "411064a0be254f0275287088da29c256",
+                "timestamp": "2026-10-12T00:00:00Z"
+            },
+            {
                 "version": "1.1.2.0",
                 "changelog": "Marca el aviso como visto solo despues de mostrarlo (antes se marcaba al pedirlo, aunque fallase el pintado), Reset solo para administradores, foco y recuperacion de foco accesibles en mando de TV.",
                 "targetAbi": "12.2.0.0",
