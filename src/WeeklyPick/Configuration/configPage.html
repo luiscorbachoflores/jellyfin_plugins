@@ -33,10 +33,15 @@
                         <label class="inputLabel inputLabelUnfocused" for="NewText" style="display:block;margin-bottom:.4em;">Texto de la recomendación</label>
                         <textarea id="NewText" rows="3" style="width:100%;box-sizing:border-box;background:#292929;color:inherit;border:1px solid #444;border-radius:4px;padding:.6em;font:inherit;"></textarea>
                     </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="NewItemId">Id de la película/serie (opcional)</label>
-                        <input is="emby-input" type="text" id="NewItemId" />
-                        <div class="fieldDescription">Cópialo de la URL al abrir la ficha en el navegador (parámetro id=...). Si lo rellenas, el aviso incluye un botón "Ver ficha".</div>
+                    <div class="inputContainer" style="position:relative">
+                        <label class="inputLabel inputLabelUnfocused" for="NewItemSearch">Película o serie (opcional)</label>
+                        <input is="emby-input" type="text" id="NewItemSearch" autocomplete="off" placeholder="Escribe el título para buscarlo..." />
+                        <div class="fieldDescription">Busca por nombre en tu biblioteca y elige el resultado correcto. Si lo rellenas, el aviso incluye un botón "Ver ficha".</div>
+                        <div id="NewItemResults" style="display:none;position:absolute;left:0;right:0;z-index:20;background:#1c1c1c;border:1px solid #444;border-radius:4px;max-height:16em;overflow-y:auto"></div>
+                        <div id="NewItemChosen" style="display:none;margin-top:.4em;opacity:.85">
+                            Elegido: <strong id="NewItemChosenText"></strong>
+                            <button is="emby-button" type="button" id="NewItemClear" class="raised" style="margin-left:.6em;padding:.2em .8em">Quitar</button>
+                        </div>
                     </div>
                     <button is="emby-button" type="button" id="BtnAdd" class="raised button-submit block">
                         <span>Añadir a la lista</span>
@@ -51,12 +56,35 @@
                         <span>Forzar reaparición ahora (olvida quién ha visto ya la de esta semana)</span>
                     </button>
                 </div>
+
+                <div class="verticalSection" style="margin-top:2em">
+                    <div style="display:flex;align-items:center;gap:.6em;flex-wrap:wrap">
+                        <h3 style="margin:0">Quién ha visto la de esta semana</h3>
+                        <button is="emby-button" type="button" id="BtnStatsRefresh" class="raised">Actualizar</button>
+                    </div>
+                    <div style="overflow-x:auto;margin-top:.6em">
+                        <table id="StatsTable" style="width:100%;border-collapse:collapse;text-align:left">
+                            <thead>
+                                <tr><th style="padding:.4em">Usuario</th><th style="padding:.4em">Visto</th><th style="padding:.4em">Ha accedido</th><th style="padding:.4em">Ha cerrado sin ver</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         <script type="text/javascript">
             (function () {
                 var pluginId = "63a86ee3-680e-4577-8a85-a0594cd8548a";
                 var entries = [];
+                var chosenItemId = "";
+                var chosenItemTitle = "";
+
+                function esc(s) {
+                    var d = document.createElement("div");
+                    d.textContent = s == null ? "" : String(s);
+                    return d.innerHTML;
+                }
 
                 function fridayOf(dateStr) {
                     var d = new Date(dateStr + "T00:00:00");
@@ -74,9 +102,10 @@
                         return;
                     }
                     list.innerHTML = entries.map(function (e, i) {
+                        var who = e.ItemTitle ? (" <em>(" + esc(e.ItemTitle) + ")</em>") : (e.ItemId ? " <em>(con ficha)</em>" : "");
                         return "<div style=\"display:flex;align-items:center;gap:1em;padding:.6em 0;border-bottom:1px solid rgba(255,255,255,.1)\">" +
-                            "<strong style=\"min-width:7em\">" + e.WeekStart + "</strong>" +
-                            "<span style=\"flex:1\">" + e.Text.replace(/</g, "&lt;") + (e.ItemId ? " <em>(con ficha)</em>" : "") + "</span>" +
+                            "<strong style=\"min-width:7em\">" + esc(e.WeekStart) + "</strong>" +
+                            "<span style=\"flex:1\">" + esc(e.Text) + who + "</span>" +
                             "<button is=\"emby-button\" type=\"button\" class=\"raised\" data-idx=\"" + i + "\">Borrar</button>" +
                             "</div>";
                     }).join("");
@@ -88,6 +117,84 @@
                     });
                 }
 
+                function setChosen(id, title) {
+                    chosenItemId = id || "";
+                    chosenItemTitle = title || "";
+                    var chosen = document.querySelector("#NewItemChosen");
+                    var search = document.querySelector("#NewItemSearch");
+                    if (chosenItemId) {
+                        document.querySelector("#NewItemChosenText").textContent = chosenItemTitle;
+                        chosen.style.display = "";
+                        search.value = "";
+                        search.style.display = "none";
+                    } else {
+                        chosen.style.display = "none";
+                        search.style.display = "";
+                    }
+                }
+
+                var searchTimer = null;
+                function doSearch(term) {
+                    var results = document.querySelector("#NewItemResults");
+                    if (!term || term.trim().length < 2) {
+                        results.style.display = "none";
+                        results.innerHTML = "";
+                        return;
+                    }
+                    ApiClient.getJSON(ApiClient.getUrl("Items", {
+                        searchTerm: term.trim(),
+                        IncludeItemTypes: "Movie,Series",
+                        Recursive: true,
+                        Limit: 8,
+                        Fields: "ProductionYear"
+                    })).then(function (resp) {
+                        var items = (resp && resp.Items) || [];
+                        if (!items.length) {
+                            results.innerHTML = "<div style=\"padding:.5em;opacity:.7\">Sin resultados.</div>";
+                            results.style.display = "";
+                            return;
+                        }
+                        results.innerHTML = items.map(function (it) {
+                            var label = it.Name + (it.ProductionYear ? " (" + it.ProductionYear + ")" : "");
+                            return "<div class=\"wpResultRow\" data-id=\"" + esc(it.Id) + "\" data-title=\"" + esc(label) +
+                                "\" style=\"padding:.5em;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.08)\">" + esc(label) + "</div>";
+                        }).join("");
+                        results.style.display = "";
+                        results.querySelectorAll(".wpResultRow").forEach(function (row) {
+                            row.addEventListener("mouseenter", function () { row.style.background = "rgba(255,255,255,.08)"; });
+                            row.addEventListener("mouseleave", function () { row.style.background = ""; });
+                            row.addEventListener("click", function () {
+                                setChosen(row.getAttribute("data-id"), row.getAttribute("data-title"));
+                                results.style.display = "none";
+                                results.innerHTML = "";
+                            });
+                        });
+                    }).catch(function () {
+                        results.style.display = "none";
+                    });
+                }
+
+                function loadStats() {
+                    var tbody = document.querySelector("#StatsTable tbody");
+                    tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">Cargando...</td></tr>";
+                    ApiClient.getJSON(ApiClient.getUrl("WeeklyPick/Stats")).then(function (rows) {
+                        if (!rows.length) {
+                            tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">No hay usuarios.</td></tr>";
+                            return;
+                        }
+                        function mark(b) { return b ? "✔" : "—"; }
+                        tbody.innerHTML = rows.map(function (r) {
+                            return "<tr style=\"border-top:1px solid rgba(128,128,128,.25)\">" +
+                                "<td style=\"padding:.4em\">" + esc(r.UserName) + "</td>" +
+                                "<td style=\"padding:.4em\">" + mark(r.Shown) + "</td>" +
+                                "<td style=\"padding:.4em\">" + mark(r.Clicked) + "</td>" +
+                                "<td style=\"padding:.4em\">" + mark(r.Dismissed) + "</td></tr>";
+                        }).join("");
+                    }).catch(function () {
+                        tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">No se pudo cargar.</td></tr>";
+                    });
+                }
+
                 document.querySelector("#WeeklyPickConfigPage").addEventListener("pageshow", function () {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
@@ -96,20 +203,30 @@
                         render();
                         Dashboard.hideLoadingMsg();
                     });
+                    loadStats();
+                });
+
+                document.querySelector("#NewItemSearch").addEventListener("input", function (e) {
+                    var term = e.target.value;
+                    if (searchTimer) { clearTimeout(searchTimer); }
+                    searchTimer = setTimeout(function () { doSearch(term); }, 300);
+                });
+
+                document.querySelector("#NewItemClear").addEventListener("click", function () {
+                    setChosen("", "");
                 });
 
                 document.querySelector("#BtnAdd").addEventListener("click", function () {
                     var week = document.querySelector("#NewWeek").value;
                     var text = document.querySelector("#NewText").value.trim();
-                    var itemId = document.querySelector("#NewItemId").value.trim();
                     if (!week || !text) {
                         Dashboard.alert("Rellena al menos la semana y el texto.");
                         return;
                     }
-                    entries.push({ WeekStart: fridayOf(week), Text: text, ItemId: itemId });
+                    entries.push({ WeekStart: fridayOf(week), Text: text, ItemId: chosenItemId, ItemTitle: chosenItemTitle });
                     document.querySelector("#NewWeek").value = "";
                     document.querySelector("#NewText").value = "";
-                    document.querySelector("#NewItemId").value = "";
+                    setChosen("", "");
                     render();
                 });
 
@@ -129,8 +246,11 @@
                     ApiClient.ajax({ type: "POST", url: ApiClient.getUrl("WeeklyPick/Reset") }).then(function () {
                         Dashboard.hideLoadingMsg();
                         Dashboard.alert("Hecho: todos volverán a verla si hay entrada para la semana actual.");
+                        loadStats();
                     });
                 });
+
+                document.querySelector("#BtnStatsRefresh").addEventListener("click", loadStats);
             })();
         </script>
     </div>

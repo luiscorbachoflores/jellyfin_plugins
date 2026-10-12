@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,11 +16,13 @@ namespace Jellyfin.Plugin.WeeklyPick.Api;
 public class WeeklyPickController : ControllerBase
 {
     private readonly IAuthorizationContext _authorizationContext;
+    private readonly IUserManager _userManager;
     private readonly SeenStore _store;
 
-    public WeeklyPickController(IAuthorizationContext authorizationContext, SeenStore store)
+    public WeeklyPickController(IAuthorizationContext authorizationContext, IUserManager userManager, SeenStore store)
     {
         _authorizationContext = authorizationContext;
+        _userManager = userManager;
         _store = store;
     }
 
@@ -44,6 +49,14 @@ public class WeeklyPickController : ControllerBase
         }
 
         return CurrentWeekKey(d);
+    }
+
+    private static async Task<(bool IsAdmin, bool IsAuthenticated)> CheckAdmin(IAuthorizationContext authorizationContext, HttpRequest request)
+    {
+        var authInfo = await authorizationContext.GetAuthorizationInfo(request).ConfigureAwait(false);
+        var isAdmin = authInfo.IsApiKey
+            || (authInfo.User is not null && authInfo.User.Permissions.Any(p => p.Kind == Jellyfin.Database.Implementations.Enums.PermissionKind.IsAdministrator && p.Value));
+        return (isAdmin, authInfo.IsAuthenticated);
     }
 
     [HttpGet("ClientScript")]
@@ -114,17 +127,84 @@ public class WeeklyPickController : ControllerBase
 
         var userId = authInfo.UserId.ToString("N");
         var weekKey = CurrentWeekKey(DateTime.Now);
-        _store.MarkNotified(userId, weekKey);
+        _store.MarkShown(userId, weekKey);
         return Ok();
+    }
+
+    /// <summary>El usuario ha pulsado "Ver ficha" en el aviso de esta semana.</summary>
+    [HttpPost("Click")]
+    public async Task<ActionResult> PostClick()
+    {
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        {
+            return Unauthorized();
+        }
+
+        var userId = authInfo.UserId.ToString("N");
+        var weekKey = CurrentWeekKey(DateTime.Now);
+        _store.MarkClicked(userId, weekKey);
+        return Ok();
+    }
+
+    /// <summary>El usuario ha cerrado el aviso de esta semana sin pulsar "Ver ficha".</summary>
+    [HttpPost("Dismiss")]
+    public async Task<ActionResult> PostDismiss()
+    {
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        {
+            return Unauthorized();
+        }
+
+        var userId = authInfo.UserId.ToString("N");
+        var weekKey = CurrentWeekKey(DateTime.Now);
+        _store.MarkDismissed(userId, weekKey);
+        return Ok();
+    }
+
+    /// <summary>Quién ha visto, accedido o descartado la recomendación de esta semana. Solo admin.</summary>
+    [HttpGet("Stats")]
+    public async Task<ActionResult<List<WeeklyPickStatRowDto>>> GetStats()
+    {
+        var (isAdmin, isAuthenticated) = await CheckAdmin(_authorizationContext, Request).ConfigureAwait(false);
+        if (!isAuthenticated || !isAdmin)
+        {
+            return Unauthorized();
+        }
+
+        var weekKey = CurrentWeekKey(DateTime.Now);
+        var states = _store.StatesForWeek(weekKey);
+
+        var rows = _userManager.GetUsers()
+            .Where(u => !u.Permissions.Any(p => p.Kind == Jellyfin.Database.Implementations.Enums.PermissionKind.IsDisabled && p.Value))
+            .Select(u =>
+            {
+                var uid = u.Id.ToString("N");
+                states.TryGetValue(uid, out var state);
+                return new WeeklyPickStatRowDto
+                {
+                    UserName = u.Username,
+                    Shown = state?.Shown ?? false,
+                    ShownAtUtc = state?.ShownAtUtc,
+                    Clicked = state?.Clicked ?? false,
+                    ClickedAtUtc = state?.ClickedAtUtc,
+                    Dismissed = state?.Dismissed ?? false,
+                    DismissedAtUtc = state?.DismissedAtUtc,
+                };
+            })
+            .OrderByDescending(r => r.Shown)
+            .ThenBy(r => r.UserName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return Ok(rows);
     }
 
     [HttpPost("Reset")]
     public async Task<ActionResult> PostReset()
     {
-        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
-        var isAdmin = authInfo.IsApiKey
-            || (authInfo.User is not null && authInfo.User.Permissions.Any(p => p.Kind == Jellyfin.Database.Implementations.Enums.PermissionKind.IsAdministrator && p.Value));
-        if (!authInfo.IsAuthenticated || !isAdmin)
+        var (isAdmin, isAuthenticated) = await CheckAdmin(_authorizationContext, Request).ConfigureAwait(false);
+        if (!isAuthenticated || !isAdmin)
         {
             return Unauthorized();
         }
@@ -141,4 +221,21 @@ public class WeeklyPickResponseDto
     public string? Text { get; set; }
 
     public string? ItemId { get; set; }
+}
+
+public class WeeklyPickStatRowDto
+{
+    public string UserName { get; set; } = string.Empty;
+
+    public bool Shown { get; set; }
+
+    public DateTime? ShownAtUtc { get; set; }
+
+    public bool Clicked { get; set; }
+
+    public DateTime? ClickedAtUtc { get; set; }
+
+    public bool Dismissed { get; set; }
+
+    public DateTime? DismissedAtUtc { get; set; }
 }

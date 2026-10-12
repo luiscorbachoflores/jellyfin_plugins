@@ -86,7 +86,7 @@ public class SessionNotifier : IHostedService
                         return;
                     }
 
-                    _store.MarkNotified(userId, weekKey);
+                    _store.MarkShown(userId, weekKey);
                     _logger.LogInformation("WeeklyPick: aviso nativo a cliente {Client} (sesion {Session}).", clientName, session.Id);
                     await _sessionManager.SendMessageCommand(
                         session.Id,

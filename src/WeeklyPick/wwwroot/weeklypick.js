@@ -25,7 +25,7 @@
         document.head.appendChild(styleEl);
     }
 
-    function showModal(text, itemId) {
+    function showModal(text, itemId, headers) {
         injectStyle();
         var backdrop = document.createElement('div');
         backdrop.className = 'wpBackdrop';
@@ -40,18 +40,32 @@
             '</div>';
         backdrop.querySelector('.wpText').textContent = text;
 
+        // Si ya se ha pulsado "Ver ficha" no cuenta también como descarte al cerrarse el modal.
+        var resolved = false;
+
         function close() {
             backdrop.remove();
         }
 
+        function dismiss() {
+            if (resolved) {
+                return;
+            }
+            resolved = true;
+            fetch('/WeeklyPick/Dismiss', { method: 'POST', headers: headers }).catch(function () {});
+            close();
+        }
+
         backdrop.addEventListener('click', function (evt) {
             if (evt.target === backdrop) {
-                close();
+                dismiss();
             }
         });
-        backdrop.querySelector('.wpClose').addEventListener('click', close);
+        backdrop.querySelector('.wpClose').addEventListener('click', dismiss);
         if (itemId) {
             backdrop.querySelector('.wpView').addEventListener('click', function () {
+                resolved = true;
+                fetch('/WeeklyPick/Click', { method: 'POST', headers: headers }).catch(function () {});
                 close();
                 window.location.hash = '#/details?id=' + itemId;
             });
@@ -76,10 +90,10 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (data && data.Show) {
-                    showModal(data.Text, data.ItemId);
+                    showModal(data.Text, data.ItemId, headers);
                     // Se confirma como visto solo ahora que el aviso está realmente en
                     // pantalla, no al pedirlo: si el fetch hubiera fallado o la pestaña
-                    // se hubiera cerrado antes, el usuario lo vería la próxima vez.
+                    // se hubiera cerrado antes, el usuario lo vería en la siguiente visita.
                     fetch('/WeeklyPick/Ack', { method: 'POST', headers: headers }).catch(function () {});
                 }
             })
