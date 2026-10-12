@@ -147,7 +147,7 @@ public class WeeklyPickController : ControllerBase
         return Ok();
     }
 
-    /// <summary>El usuario ha cerrado el aviso activo hoy sin pulsar "Ver ficha".</summary>
+    /// <summary>El usuario ha cerrado el aviso activo hoy sin pulsar ningún botón de opinión.</summary>
     [HttpPost("Dismiss")]
     public async Task<ActionResult> PostDismiss()
     {
@@ -167,8 +167,28 @@ public class WeeklyPickController : ControllerBase
         return Ok();
     }
 
-    /// <summary>Quién ha visto, accedido o descartado una entrada concreta (la activa hoy, u
-    /// otra antigua pasando su Id). Solo admin.</summary>
+    /// <summary>El usuario ha pulsado "Me interesa" o "No me interesa" en el aviso activo hoy.</summary>
+    [HttpPost("Interest")]
+    public async Task<ActionResult> PostInterest([FromQuery] bool value)
+    {
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        if (!authInfo.IsAuthenticated || authInfo.User is null)
+        {
+            return Unauthorized();
+        }
+
+        var entry = EntryForDate(Plugin.Instance!.Configuration, DateTime.Now);
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Id))
+        {
+            return Ok();
+        }
+
+        _store.MarkInterest(authInfo.UserId.ToString("N"), entry.Id, value);
+        return Ok();
+    }
+
+    /// <summary>Quién ha visto, accedido, descartado o dado su opinión de una entrada concreta
+    /// (la activa hoy, u otra antigua pasando su Id). Solo admin.</summary>
     [HttpGet("Stats")]
     public async Task<ActionResult<List<WeeklyPickStatRowDto>>> GetStats([FromQuery] string? entryId)
     {
@@ -193,6 +213,7 @@ public class WeeklyPickController : ControllerBase
                 states.TryGetValue(uid, out var state);
                 return new WeeklyPickStatRowDto
                 {
+                    UserId = uid,
                     UserName = u.Username,
                     ShowCount = state?.ShowCount ?? 0,
                     LastShownAtUtc = state?.LastShownAtUtc,
@@ -200,6 +221,8 @@ public class WeeklyPickController : ControllerBase
                     ClickedAtUtc = state?.ClickedAtUtc,
                     Dismissed = state?.Dismissed ?? false,
                     DismissedAtUtc = state?.DismissedAtUtc,
+                    Interested = state?.Interested,
+                    InterestAtUtc = state?.InterestAtUtc,
                 };
             })
             .OrderByDescending(r => r.ShowCount)
@@ -209,10 +232,10 @@ public class WeeklyPickController : ControllerBase
         return Ok(rows);
     }
 
-    /// <summary>Olvida lo visto de una entrada concreta (por defecto la activa hoy), para que
-    /// vuelva a aparecer. No toca el historial de otras entradas.</summary>
-    [HttpPost("Reset")]
-    public async Task<ActionResult> PostReset([FromQuery] string? entryId)
+    /// <summary>Olvida lo registrado de UN usuario para una entrada (para que vuelva a
+    /// aparecerle a él solo), sin tocar a los demás. Solo admin.</summary>
+    [HttpPost("ResetUser")]
+    public async Task<ActionResult> PostResetUser([FromQuery] string entryId, [FromQuery] string userId)
     {
         var (isAdmin, isAuthenticated) = await CheckAdmin(_authorizationContext, Request).ConfigureAwait(false);
         if (!isAuthenticated || !isAdmin)
@@ -220,19 +243,12 @@ public class WeeklyPickController : ControllerBase
             return Unauthorized();
         }
 
-        var targetId = entryId;
-        if (string.IsNullOrWhiteSpace(targetId))
+        if (string.IsNullOrWhiteSpace(entryId) || string.IsNullOrWhiteSpace(userId))
         {
-            var entry = EntryForDate(Plugin.Instance!.Configuration, DateTime.Now);
-            targetId = entry?.Id;
+            return BadRequest();
         }
 
-        if (string.IsNullOrWhiteSpace(targetId))
-        {
-            return Ok();
-        }
-
-        _store.ClearEntry(targetId);
+        _store.ClearUser(userId, entryId);
         return Ok();
     }
 }
@@ -248,6 +264,8 @@ public class WeeklyPickResponseDto
 
 public class WeeklyPickStatRowDto
 {
+    public string UserId { get; set; } = string.Empty;
+
     public string UserName { get; set; } = string.Empty;
 
     public int ShowCount { get; set; }
@@ -261,4 +279,8 @@ public class WeeklyPickStatRowDto
     public bool Dismissed { get; set; }
 
     public DateTime? DismissedAtUtc { get; set; }
+
+    public bool? Interested { get; set; }
+
+    public DateTime? InterestAtUtc { get; set; }
 }

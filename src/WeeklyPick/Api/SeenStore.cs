@@ -9,8 +9,9 @@ namespace Jellyfin.Plugin.WeeklyPick.Api;
 
 /// <summary>Historial por usuario y por entrada (no por semana: cada entrada cubre el rango
 /// de días que el admin le haya puesto) de cuántas veces se le ha mostrado, si ha pulsado
-/// "Ver ficha" y si la ha cerrado sin acceder. Guarda TODAS las entradas, para poder revisar
-/// quién vio una recomendación antigua. Clave interna: "userId|entryId".</summary>
+/// "Ver ficha", si la ha cerrado sin acceder, y si ha dicho que le interesa o no. Guarda TODAS
+/// las entradas, para poder revisar quién vio una recomendación antigua. Clave interna:
+/// "userId|entryId".</summary>
 public class SeenStore
 {
     private readonly string _path;
@@ -20,7 +21,7 @@ public class SeenStore
     {
         var dir = Path.Combine(applicationPaths.DataPath, "weeklypick");
         Directory.CreateDirectory(dir);
-        _path = Path.Combine(dir, "seen.v4.json");
+        _path = Path.Combine(dir, "seen.v5.json");
     }
 
     public class UserEntryState
@@ -44,6 +45,11 @@ public class SeenStore
         public bool Dismissed { get; set; }
 
         public DateTime? DismissedAtUtc { get; set; }
+
+        /// <summary>null = sin opinión, true = "me interesa", false = "no me interesa".</summary>
+        public bool? Interested { get; set; }
+
+        public DateTime? InterestAtUtc { get; set; }
     }
 
     private static string Key(string userId, string entryId) => userId + "|" + entryId;
@@ -94,17 +100,23 @@ public class SeenStore
         }
     }
 
+    private UserEntryState GetOrCreate(Dictionary<string, UserEntryState> data, string key, string entryId)
+    {
+        if (!data.TryGetValue(key, out var state))
+        {
+            state = new UserEntryState { EntryId = entryId };
+        }
+
+        return state;
+    }
+
     public void MarkShown(string userId, string entryId, string todayDate)
     {
         lock (_lock)
         {
             var data = Load();
             var key = Key(userId, entryId);
-            if (!data.TryGetValue(key, out var state))
-            {
-                state = new UserEntryState { EntryId = entryId };
-            }
-
+            var state = GetOrCreate(data, key, entryId);
             state.ShowCount += 1;
             state.LastShownDate = todayDate;
             state.LastShownAtUtc = DateTime.UtcNow;
@@ -120,11 +132,7 @@ public class SeenStore
         {
             var data = Load();
             var key = Key(userId, entryId);
-            if (!data.TryGetValue(key, out var state))
-            {
-                state = new UserEntryState { EntryId = entryId };
-            }
-
+            var state = GetOrCreate(data, key, entryId);
             state.Clicked = true;
             state.ClickedAtUtc = DateTime.UtcNow;
             data[key] = state;
@@ -138,13 +146,23 @@ public class SeenStore
         {
             var data = Load();
             var key = Key(userId, entryId);
-            if (!data.TryGetValue(key, out var state))
-            {
-                state = new UserEntryState { EntryId = entryId };
-            }
-
+            var state = GetOrCreate(data, key, entryId);
             state.Dismissed = true;
             state.DismissedAtUtc = DateTime.UtcNow;
+            data[key] = state;
+            Save(data);
+        }
+    }
+
+    public void MarkInterest(string userId, string entryId, bool interested)
+    {
+        lock (_lock)
+        {
+            var data = Load();
+            var key = Key(userId, entryId);
+            var state = GetOrCreate(data, key, entryId);
+            state.Interested = interested;
+            state.InterestAtUtc = DateTime.UtcNow;
             data[key] = state;
             Save(data);
         }
@@ -172,18 +190,14 @@ public class SeenStore
         }
     }
 
-    /// <summary>Olvida solo lo registrado para esta entrada (p. ej. la activa, para forzar
-    /// que vuelva a aparecer), sin tocar el historial de otras entradas.</summary>
-    public void ClearEntry(string entryId)
+    /// <summary>Olvida lo registrado de UN usuario para esta entrada (para que vuelva a
+    /// aparecerle a él solo), sin tocar a los demás ni otras entradas.</summary>
+    public void ClearUser(string userId, string entryId)
     {
         lock (_lock)
         {
             var data = Load();
-            foreach (var key in data.Where(kv => kv.Value.EntryId == entryId).Select(kv => kv.Key).ToList())
-            {
-                data.Remove(key);
-            }
-
+            data.Remove(Key(userId, entryId));
             Save(data);
         }
     }

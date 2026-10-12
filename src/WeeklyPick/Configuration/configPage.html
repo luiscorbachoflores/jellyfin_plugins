@@ -9,7 +9,7 @@
             <div class="content-primary">
                 <div class="verticalSection">
                     <h2>Recomendación Semanal</h2>
-                    <p>Aviso emergente con una recomendación personal. Cada entrada cubre un rango de días a tu elección; durante esos días, cada usuario la ve hasta el número de veces que indiques (como máximo una vez al día).</p>
+                    <p>Aviso emergente con una recomendación personal. Cada entrada cubre un rango de días a tu elección; durante esos días, cada usuario la ve hasta el número de veces que indiques (como máximo una vez al día), y puede responder "me interesa" o "no me interesa".</p>
                 </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label>
@@ -68,13 +68,19 @@
                     <div style="display:flex;align-items:center;gap:.6em;flex-wrap:wrap">
                         <h3 style="margin:0" id="StatsTitle">Quién la ha visto</h3>
                         <button is="emby-button" type="button" id="BtnStatsRefresh" class="raised">Actualizar</button>
-                        <button is="emby-button" type="button" id="BtnStatsReset" class="raised">Olvidar vistos (reaparece)</button>
                     </div>
                     <p id="StatsHint" style="opacity:.7;margin:.3em 0 0">Elige una entrada de la lista de arriba con "Ver quién la ha visto".</p>
                     <div style="overflow-x:auto;margin-top:.6em">
                         <table id="StatsTable" style="width:100%;border-collapse:collapse;text-align:left">
                             <thead>
-                                <tr><th style="padding:.4em">Usuario</th><th style="padding:.4em">Veces mostrada</th><th style="padding:.4em">Ha accedido</th><th style="padding:.4em">Ha cerrado sin ver</th></tr>
+                                <tr>
+                                    <th style="padding:.4em">Usuario</th>
+                                    <th style="padding:.4em">Veces mostrada</th>
+                                    <th style="padding:.4em">Ha accedido</th>
+                                    <th style="padding:.4em">Ha cerrado sin ver</th>
+                                    <th style="padding:.4em">Interés</th>
+                                    <th style="padding:.4em"></th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -198,16 +204,22 @@
                     });
                 }
 
+                function interestLabel(v) {
+                    if (v === true) { return "👍 Sí"; }
+                    if (v === false) { return "👎 No"; }
+                    return "—";
+                }
+
                 function loadStats() {
                     var tbody = document.querySelector("#StatsTable tbody");
                     if (!selectedEntryId) {
                         tbody.innerHTML = "";
                         return;
                     }
-                    tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">Cargando...</td></tr>";
+                    tbody.innerHTML = "<tr><td colspan=\"6\" style=\"padding:.4em;opacity:.7\">Cargando...</td></tr>";
                     ApiClient.getJSON(ApiClient.getUrl("WeeklyPick/Stats", { entryId: selectedEntryId })).then(function (rows) {
                         if (!rows.length) {
-                            tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">No hay usuarios.</td></tr>";
+                            tbody.innerHTML = "<tr><td colspan=\"6\" style=\"padding:.4em;opacity:.7\">No hay usuarios.</td></tr>";
                             return;
                         }
                         function mark(b) { return b ? "✔" : "—"; }
@@ -216,10 +228,21 @@
                                 "<td style=\"padding:.4em\">" + esc(r.UserName) + "</td>" +
                                 "<td style=\"padding:.4em\">" + esc(r.ShowCount) + "</td>" +
                                 "<td style=\"padding:.4em\">" + mark(r.Clicked) + "</td>" +
-                                "<td style=\"padding:.4em\">" + mark(r.Dismissed) + "</td></tr>";
+                                "<td style=\"padding:.4em\">" + mark(r.Dismissed) + "</td>" +
+                                "<td style=\"padding:.4em\">" + interestLabel(r.Interested) + "</td>" +
+                                "<td style=\"padding:.4em\"><button is=\"emby-button\" type=\"button\" class=\"raised wpResetBtn\" data-user-id=\"" + esc(r.UserId) + "\" style=\"padding:.2em .8em\">Reaparece</button></td>" +
+                                "</tr>";
                         }).join("");
+                        tbody.querySelectorAll(".wpResetBtn").forEach(function (btn) {
+                            btn.addEventListener("click", function () {
+                                ApiClient.ajax({
+                                    type: "POST",
+                                    url: ApiClient.getUrl("WeeklyPick/ResetUser", { entryId: selectedEntryId, userId: btn.getAttribute("data-user-id") })
+                                }).then(loadStats);
+                            });
+                        });
                     }).catch(function () {
-                        tbody.innerHTML = "<tr><td colspan=\"4\" style=\"padding:.4em;opacity:.7\">No se pudo cargar.</td></tr>";
+                        tbody.innerHTML = "<tr><td colspan=\"6\" style=\"padding:.4em;opacity:.7\">No se pudo cargar.</td></tr>";
                     });
                 }
 
@@ -291,21 +314,6 @@
                 });
 
                 document.querySelector("#BtnStatsRefresh").addEventListener("click", loadStats);
-
-                document.querySelector("#BtnStatsReset").addEventListener("click", function () {
-                    if (!selectedEntryId) {
-                        Dashboard.alert("Elige antes una entrada con \"Ver quién la ha visto\".");
-                        return;
-                    }
-                    if (!confirm("¿Olvidar a quién se le ha mostrado esta entrada? Volverá a aparecer.")) {
-                        return;
-                    }
-                    Dashboard.showLoadingMsg();
-                    ApiClient.ajax({ type: "POST", url: ApiClient.getUrl("WeeklyPick/Reset", { entryId: selectedEntryId }) }).then(function () {
-                        Dashboard.hideLoadingMsg();
-                        loadStats();
-                    });
-                });
             })();
         </script>
     </div>

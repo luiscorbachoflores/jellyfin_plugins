@@ -9,9 +9,10 @@
         '.wpModal{background:#1c1c1c;border-radius:8px;padding:1.5em;max-width:32em;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.5);}',
         '.wpModal h2{margin:0 0 .5em 0;font-size:1.25em;}',
         '.wpText{white-space:pre-wrap;opacity:.9;margin:0 0 1em 0;}',
-        '.wpActions{display:flex;justify-content:flex-end;gap:.6em;}',
+        '.wpActions{display:flex;justify-content:flex-end;gap:.6em;flex-wrap:wrap;}',
         '.wpActions button{padding:.5em 1.2em;border-radius:4px;border:none;cursor:pointer;font-size:.9em;}',
-        '.wpClose{background:transparent;color:inherit;border:1px solid #555 !important;}',
+        '.wpNo{background:transparent;color:inherit;border:1px solid #555 !important;}',
+        '.wpYes{background:transparent;color:inherit;border:1px solid #00a4dc !important;}',
         '.wpView{background:#00a4dc;color:#fff;}'
     ].join('');
 
@@ -31,16 +32,17 @@
         backdrop.className = 'wpBackdrop';
         backdrop.innerHTML = '' +
             '<div class="wpModal">' +
-            '  <h2>Recomendación de la semana</h2>' +
+            '  <h2>Recomendación</h2>' +
             '  <p class="wpText"></p>' +
             '  <div class="wpActions">' +
+            '    <button type="button" class="wpNo">No me interesa</button>' +
+            '    <button type="button" class="wpYes">Me interesa</button>' +
             (itemId ? '<button type="button" class="wpView">Ver ficha</button>' : '') +
-            '    <button type="button" class="wpClose">Cerrar</button>' +
             '  </div>' +
             '</div>';
         backdrop.querySelector('.wpText').textContent = text;
 
-        // Si ya se ha pulsado "Ver ficha" no cuenta también como descarte al cerrarse el modal.
+        // Si ya se ha respondido algo, no cuenta también como descarte al cerrarse el modal.
         var resolved = false;
 
         function close() {
@@ -61,7 +63,19 @@
                 dismiss();
             }
         });
-        backdrop.querySelector('.wpClose').addEventListener('click', dismiss);
+
+        backdrop.querySelector('.wpNo').addEventListener('click', function () {
+            resolved = true;
+            fetch('/WeeklyPick/Interest?value=false', { method: 'POST', headers: headers }).catch(function () {});
+            close();
+        });
+
+        backdrop.querySelector('.wpYes').addEventListener('click', function () {
+            resolved = true;
+            fetch('/WeeklyPick/Interest?value=true', { method: 'POST', headers: headers }).catch(function () {});
+            close();
+        });
+
         if (itemId) {
             backdrop.querySelector('.wpView').addEventListener('click', function () {
                 resolved = true;
