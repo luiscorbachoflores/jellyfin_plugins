@@ -198,5 +198,23 @@
                 "timestamp": "2026-09-29T00:00:00Z"
             }
         ]
+    },
+    {
+        "guid": "63a86ee3-680e-4577-8a85-a0594cd8548a",
+        "name": "Recomendación Semanal",
+        "description": "Muestra un aviso emergente con una recomendacion personal, en el rango de dias, veces y usuarios que elijas.",
+        "overview": "Aviso con una recomendacion personal, configurable desde el panel de plugins.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.5.1.0",
+                "changelog": "Rango de dias, veces a mostrar, usuarios seleccionables (marcados por defecto), me interesa/no me interesa, Reaparece por usuario, estadisticas por entrada.",
+                "targetAbi": "10.11.8.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.5.1.0/WeeklyPick_1.5.1.0_10.11.8.zip",
+                "checksum": "0f180020c28c78aa6dfe4cb4b4d228a6",
+                "timestamp": "2026-10-12T00:00:00Z"
+            }
+        ]
     }
 ]
