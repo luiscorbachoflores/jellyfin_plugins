@@ -281,7 +281,12 @@
     // ------------------------------------------------------------------ widget
     function buildWidget(itemId) {
         var readOnly = isTv();
-        var loggedIn = !!token();
+        // El token puede no estar listo justo al construir el widget (p.ej.
+        // recien reconectado): se reintenta unas cuantas veces y se revalida
+        // justo antes de publicar/editar/borrar, en vez de fiarse de una
+        // lectura unica.
+        var loggedIn = false;
+        var loginRetries = 0;
         var userName = '';
         var editingId = null;
         var currentReviews = [];
@@ -313,6 +318,32 @@
             } else {
                 previewEl.textContent = 'Se publicará como ' + (userName || 'tu usuario') + '.';
             }
+        }
+
+        function refreshLoginState() {
+            var c = apiClient();
+            var was = loggedIn;
+            loggedIn = !!(c && typeof c.accessToken === 'function' && c.accessToken());
+            if (loggedIn) {
+                if (anonInput) { anonInput.disabled = false; }
+                if (!was && c && typeof c.getCurrentUser === 'function') {
+                    c.getCurrentUser().then(function (u) {
+                        userName = (u && u.Name) || '';
+                        refreshPreview();
+                    }).catch(function () { /* optional */ });
+                }
+            } else {
+                if (anonInput) {
+                    anonInput.checked = true;
+                    anonInput.disabled = true;
+                }
+                if (loginRetries < 10) {
+                    loginRetries += 1;
+                    setTimeout(refreshLoginState, 500);
+                }
+            }
+            refreshPreview();
+            return loggedIn;
         }
 
         function resetForm() {
@@ -351,21 +382,9 @@
             formEl.appendChild(statusEl);
             container.appendChild(formEl);
 
-            if (!loggedIn) {
-                anonInput.checked = true;
-                anonInput.disabled = true;
-            } else {
-                var c = apiClient();
-                if (c && typeof c.getCurrentUser === 'function') {
-                    c.getCurrentUser().then(function (u) {
-                        userName = (u && u.Name) || '';
-                        refreshPreview();
-                    }).catch(function () { /* optional */ });
-                }
-            }
+            refreshLoginState();
             anonInput.addEventListener('change', refreshPreview);
             textarea.addEventListener('input', function () { countEl.textContent = textarea.value.length + ' / ' + MAX_COMMENT; });
-            refreshPreview();
 
             cancelBtn.addEventListener('click', function () {
                 resetForm();
@@ -379,7 +398,7 @@
                     setStatus('Indica una puntuación, un comentario, o ambos.', true);
                     return;
                 }
-                if (!loggedIn) {
+                if (!refreshLoginState()) {
                     setStatus('Necesitas iniciar sesión en Jellyfin para publicar una reseña (incluso en modo anónimo, nadie más verá tu nombre).', true);
                     return;
                 }
