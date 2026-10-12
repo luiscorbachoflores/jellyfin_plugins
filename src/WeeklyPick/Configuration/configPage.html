@@ -54,7 +54,10 @@
                         </div>
                     </div>
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused">Usuarios (ninguno marcado = todos)</label>
+                        <div style="display:flex;align-items:center;gap:.8em;flex-wrap:wrap">
+                            <label class="inputLabel inputLabelUnfocused" style="margin:0">Usuarios</label>
+                            <button is="emby-button" type="button" id="BtnToggleAllUsers" class="raised" style="padding:.2em .8em">Marcar/desmarcar todos</button>
+                        </div>
                         <div id="NewUserPicker" style="display:flex;flex-wrap:wrap;gap:.8em;padding:.4em 0"></div>
                     </div>
                     <button is="emby-button" type="button" id="BtnAdd" class="raised button-submit block">
@@ -262,7 +265,7 @@
                     }
                     box.innerHTML = allUsers.map(function (u) {
                         return "<label style=\"display:flex;align-items:center;gap:.3em;cursor:pointer\">" +
-                            "<input is=\"emby-checkbox\" type=\"checkbox\" class=\"wpUserCheck\" value=\"" + esc(u.Id) + "\" />" +
+                            "<input is=\"emby-checkbox\" type=\"checkbox\" class=\"wpUserCheck\" value=\"" + esc(u.Id) + "\" checked />" +
                             "<span>" + esc(u.Name) + "</span></label>";
                     }).join("");
                 }
@@ -301,6 +304,12 @@
                     setChosen("", "");
                 });
 
+                document.querySelector("#BtnToggleAllUsers").addEventListener("click", function () {
+                    var boxes = document.querySelectorAll(".wpUserCheck");
+                    var allChecked = Array.prototype.every.call(boxes, function (c) { return c.checked; });
+                    boxes.forEach(function (c) { c.checked = !allChecked; });
+                });
+
                 document.querySelector("#BtnAdd").addEventListener("click", function () {
                     var dateStart = document.querySelector("#NewDateStart").value;
                     var dateEnd = document.querySelector("#NewDateEnd").value;
@@ -314,7 +323,13 @@
                         Dashboard.alert("La fecha \"Hasta\" no puede ser anterior a \"Desde\".");
                         return;
                     }
-                    var userIds = Array.prototype.slice.call(document.querySelectorAll(".wpUserCheck:checked")).map(function (c) { return c.value; });
+                    var checkedBoxes = Array.prototype.slice.call(document.querySelectorAll(".wpUserCheck:checked"));
+                    var allBoxes = document.querySelectorAll(".wpUserCheck");
+                    // Si están todos marcados, se guarda como "todos" (lista vacía), para que
+                    // siga aplicando a usuarios que se creen más adelante.
+                    var userIds = (allBoxes.length && checkedBoxes.length === allBoxes.length)
+                        ? []
+                        : checkedBoxes.map(function (c) { return c.value; });
                     entries.push({
                         Id: newId(),
                         DateStart: dateStart,
@@ -329,7 +344,7 @@
                     document.querySelector("#NewDateEnd").value = "";
                     document.querySelector("#NewTimesToShow").value = "2";
                     document.querySelector("#NewText").value = "";
-                    document.querySelectorAll(".wpUserCheck:checked").forEach(function (c) { c.checked = false; });
+                    document.querySelectorAll(".wpUserCheck").forEach(function (c) { c.checked = true; });
                     setChosen("", "");
                     render();
                 });
