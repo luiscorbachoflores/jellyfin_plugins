@@ -8,6 +8,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.5.1.0",
+                "changelog": "Accesibilidad completa (foco, lectores de pantalla, TV con mando), limite de 2000 caracteres y anti-flood (10 por titulo, 30 por hora), id invalido de Jellyfin 10.11 ya no da 500, y la sesion se revalida justo antes de publicar/editar/borrar en vez de fiarse de una lectura unica al cargar la ficha.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.5.1.0/Reviews_12.2.0.zip",
+                "checksum": "153b6fbca5925b004a52dd3b957eb5fc",
+                "timestamp": "2026-10-12T00:00:00Z"
+            },
+            {
                 "version": "1.4.4.0",
                 "changelog": "Arregla el cuadro de comentario mostrandose en blanco sobre blanco: el estilo neutro dejaba el fondo del textarea sin definir (heredaba el blanco por defecto del navegador) mientras el texto heredaba el color claro del tema oscuro. Ahora usa la clase de campo de Jellyfin (emby-textarea), con el estilo propio del tema. Ademas, el mensaje de error al borrar una resena ahora dice el motivo real, y el servidor registra en el log los intentos de editar/borrar rechazados, para diagnosticar mejor si vuelve a fallar.",
                 "targetAbi": "10.11.8.0",
@@ -105,6 +113,14 @@
         "owner": "luiscorbachoflores",
         "category": "General",
         "versions": [
+            {
+                "version": "1.3.0.0",
+                "changelog": "Dock de botones flotantes accesible (foco, lectores de pantalla, TV con mando), cabecera Authorization en vez de X-Emby-Token, limite de 5 peticiones por minuto y 1000 caracteres.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/jellyask-v1.3.0.0/JellyAsk_12.2.0.zip",
+                "checksum": "36d709964e233584aa469d1892cc4786",
+                "timestamp": "2026-10-12T00:00:00Z"
+            },
             {
                 "version": "1.2.0.0",
                 "changelog": "Boton flotante fijo en vez de un enlace dentro del cajon lateral clasico: esa superficie ya no es donde los usuarios llegan a Ajustes en el cliente web 12.x (ahora es un menu aparte, colgado del avatar), asi que el enlace antiguo quedaba invisible en la practica. El boton flotante no depende de la estructura interna de ningun menu de Jellyfin.",
