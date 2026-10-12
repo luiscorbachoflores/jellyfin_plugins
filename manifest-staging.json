@@ -224,6 +224,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.5.1.0",
+                "changelog": "Usuarios marcados por defecto en el selector, con boton para marcar/desmarcar todos de golpe.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.5.1.0/WeeklyPick_1.5.1.0.zip",
+                "checksum": "75289b6896be0b9d169db44af0eb9679",
+                "timestamp": "2026-10-12T00:00:00Z"
+            },
+            {
                 "version": "1.4.0.0",
                 "changelog": "Botones Me interesa / No me interesa en el aviso. Boton Reaparece por usuario en vez de global, con columna de interes en el panel.",
                 "targetAbi": "12.2.0.0",
