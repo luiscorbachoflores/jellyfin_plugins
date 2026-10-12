@@ -224,6 +224,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.1.2.0",
+                "changelog": "Marca el aviso como visto solo despues de mostrarlo (antes se marcaba al pedirlo, aunque fallase el pintado), Reset solo para administradores, foco y recuperacion de foco accesibles en mando de TV.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.1.2.0/WeeklyPick.zip",
+                "checksum": "b0d39e4372ff7d3306cd6a354cd8bcfd",
+                "timestamp": "2026-10-12T00:00:00Z"
+            },
+            {
                 "version": "1.1.0.0",
                 "changelog": "Marca el aviso como visto solo despues de mostrarlo (antes se marcaba al pedirlo, aunque fallase el pintado), Reset solo para administradores, foco y recuperacion accesibles en TV.",
                 "targetAbi": "12.2.0.0",
