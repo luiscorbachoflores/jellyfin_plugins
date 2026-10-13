@@ -224,6 +224,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.5.2.0",
+                "changelog": "Borrado logico: Borrar oculta la entrada en vez de destruirla, recuperable desde Ver borradas. Sin confirmaciones ni backups.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.5.2.0/WeeklyPick_1.5.2.0.zip",
+                "checksum": "12e73d5e34e2ad5ab65ed10b5145c5a3",
+                "timestamp": "2026-10-13T00:00:00Z"
+            },
+            {
                 "version": "1.5.1.0",
                 "changelog": "Usuarios marcados por defecto en el selector, con boton para marcar/desmarcar todos de golpe.",
                 "targetAbi": "12.2.0.0",
