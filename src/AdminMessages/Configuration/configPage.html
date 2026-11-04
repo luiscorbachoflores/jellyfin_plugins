@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AdminMessages</title>
+</head>
+<body>
+    <div id="AdminMessagesConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+        <div data-role="content">
+            <div class="content-primary">
+                <div class="verticalSection">
+                    <h2>Mensajes a usuarios</h2>
+                    <p>Crea avisos persistentes que los usuarios verán en una bandeja la próxima vez que entren. Puedes dirigirlos a todos los usuarios o a una lista concreta.</p>
+                </div>
+                <form id="AdminMessagesForm">
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="AdminMessageTitle">Título</label>
+                        <input is="emby-input" type="text" id="AdminMessageTitle" name="Title" required />
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="AdminMessageBody">Mensaje</label>
+                        <textarea is="emby-textarea" id="AdminMessageBody" name="Body" required class="emby-textarea"></textarea>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="AdminMessageBroadcast" checked />
+                            <span>Enviar a todos los usuarios</span>
+                        </label>
+                    </div>
+                    <div class="inputContainer" id="AdminMessageUsersContainer" style="display:none;">
+                        <label class="inputLabel inputLabelUnfocused" for="AdminMessageUsers">Usuarios destinatarios</label>
+                        <select is="emby-select" id="AdminMessageUsers" multiple style="height:8em;"></select>
+                        <div class="fieldDescription">Mantén pulsado Ctrl/Cmd para seleccionar varios.</div>
+                    </div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block" id="AdminMessageSubmitBtn">
+                            <span>Publicar mensaje</span>
+                        </button>
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="AdminMessageCancelBtn" style="display:none;">
+                            <span>Cancelar edición</span>
+                        </button>
+                    </div>
+                    <div class="fieldDescription" id="AdminMessageStatus"></div>
+                </form>
+
+                <div class="verticalSection">
+                    <h2>Mensajes existentes</h2>
+                    <div id="AdminMessagesList"><p>Cargando...</p></div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var page = document.querySelector('#AdminMessagesConfigPage');
+                var form = page.querySelector('#AdminMessagesForm');
+                var titleInput = page.querySelector('#AdminMessageTitle');
+                var bodyInput = page.querySelector('#AdminMessageBody');
+                var broadcastInput = page.querySelector('#AdminMessageBroadcast');
+                var usersContainer = page.querySelector('#AdminMessageUsersContainer');
+                var usersSelect = page.querySelector('#AdminMessageUsers');
+                var submitBtn = page.querySelector('#AdminMessageSubmitBtn');
+                var cancelBtn = page.querySelector('#AdminMessageCancelBtn');
+                var statusEl = page.querySelector('#AdminMessageStatus');
+                var listEl = page.querySelector('#AdminMessagesList');
+                var editingId = null;
+                var allUsers = [];
+
+                function authHeaders(extra) {
+                    var headers = extra || {};
+                    var token = ApiClient && typeof ApiClient.accessToken === 'function' ? ApiClient.accessToken() : null;
+                    if (token) {
+                        headers['Authorization'] = 'MediaBrowser Token="' + token + '"';
+                    }
+                    return headers;
+                }
+
+                function setStatus(text) {
+                    statusEl.textContent = text;
+                }
+
+                function escapeHtml(str) {
+                    var div = document.createElement('div');
+                    div.textContent = str == null ? '' : String(str);
+                    return div.innerHTML;
+                }
+
+                function handleResponse(r) {
+                    if (!r.ok) {
+                        return r.text().then(function (t) { throw new Error(t || ('HTTP ' + r.status)); });
+                    }
+                    return r.status === 204 ? null : r.json();
+                }
+
+                function loadUsers() {
+                    return ApiClient.getUsers().then(function (users) {
+                        allUsers = users || [];
+                        usersSelect.innerHTML = allUsers.map(function (u) {
+                            return '<option value="' + u.Id + '">' + escapeHtml(u.Name) + '</option>';
+                        }).join('');
+                    }).catch(function () {
+                        allUsers = [];
+                    });
+                }
+
+                function userNames(ids) {
+                    if (!ids || ids.length === 0) {
+                        return 'Todos los usuarios';
+                    }
+                    var names = ids.map(function (id) {
+                        var u = allUsers.filter(function (x) { return x.Id === id; })[0];
+                        return u ? u.Name : id;
+                    });
+                    return names.join(', ');
+                }
+
+                function toggleUsersContainer() {
+                    usersContainer.style.display = broadcastInput.checked ? 'none' : '';
+                }
+                broadcastInput.addEventListener('change', toggleUsersContainer);
+
+                function resetForm() {
+                    form.reset();
+                    editingId = null;
+                    broadcastInput.checked = true;
+                    toggleUsersContainer();
+                    Array.prototype.forEach.call(usersSelect.options, function (o) { o.selected = false; });
+                    submitBtn.querySelector('span').textContent = 'Publicar mensaje';
+                    cancelBtn.style.display = 'none';
+                }
+
+                cancelBtn.addEventListener('click', function () {
+                    resetForm();
+                    setStatus('');
+                });
+
+                function refreshList() {
+                    listEl.innerHTML = '<p>Cargando...</p>';
+                    fetch('/AdminMessages', { headers: authHeaders() }).then(handleResponse).then(function (messages) {
+                        if (!messages || messages.length === 0) {
+                            listEl.innerHTML = '<p>Todavía no hay mensajes.</p>';
+                            return;
+                        }
+                        listEl.innerHTML = messages.map(function (m) {
+                            var date = new Date(m.CreatedUtc);
+                            var dateStr = isNaN(date.getTime()) ? '' : date.toLocaleString();
+                            return '' +
+                                '<div class="listItem" data-id="' + m.Id + '" style="padding:.8em 0;border-top:1px solid rgba(128,128,128,.3);">' +
+                                '  <div style="font-weight:600;">' + escapeHtml(m.Title) + '</div>' +
+                                '  <div style="font-size:.85em;opacity:.75;">' + dateStr + ' &middot; ' + escapeHtml(userNames(m.TargetUserIds)) + '</div>' +
+                                '  <div style="margin:.4em 0;white-space:pre-wrap;">' + escapeHtml(m.Body) + '</div>' +
+                                '  <button is="emby-button" type="button" class="raised adminMessageEditBtn">Editar</button>' +
+                                '  <button is="emby-button" type="button" class="raised adminMessageDeleteBtn">Eliminar</button>' +
+                                '</div>';
+                        }).join('');
+                    }).catch(function (err) {
+                        listEl.innerHTML = '<p>No se pudieron cargar los mensajes (' + escapeHtml(err.message) + ').</p>';
+                    });
+                }
+
+                listEl.addEventListener('click', function (evt) {
+                    var item = evt.target.closest('.listItem');
+                    if (!item) {
+                        return;
+                    }
+                    var id = item.getAttribute('data-id');
+                    if (evt.target.closest('.adminMessageDeleteBtn')) {
+                        if (window.confirm('¿Eliminar este mensaje?')) {
+                            fetch('/AdminMessages/' + id, { method: 'DELETE', headers: authHeaders() }).then(handleResponse).then(function () {
+                                if (editingId === id) {
+                                    resetForm();
+                                }
+                                refreshList();
+                            }).catch(function (err) {
+                                setStatus('Error al eliminar: ' + err.message);
+                            });
+                        }
+                    } else if (evt.target.closest('.adminMessageEditBtn')) {
+                        fetch('/AdminMessages', { headers: authHeaders() }).then(handleResponse).then(function (messages) {
+                            var m = (messages || []).filter(function (x) { return x.Id === id; })[0];
+                            if (!m) {
+                                return;
+                            }
+                            editingId = id;
+                            titleInput.value = m.Title;
+                            bodyInput.value = m.Body;
+                            var targets = m.TargetUserIds || [];
+                            broadcastInput.checked = targets.length === 0;
+                            toggleUsersContainer();
+                            Array.prototype.forEach.call(usersSelect.options, function (o) {
+                                o.selected = targets.indexOf(o.value) !== -1;
+                            });
+                            submitBtn.querySelector('span').textContent = 'Guardar cambios';
+                            cancelBtn.style.display = '';
+                            setStatus('Editando mensaje.');
+                            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        });
+                    }
+                });
+
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var title = titleInput.value.trim();
+                    var body = bodyInput.value.trim();
+                    if (!title || !body) {
+                        setStatus('Título y mensaje son obligatorios.');
+                        return;
+                    }
+                    var targetUserIds = broadcastInput.checked
+                        ? []
+                        : Array.prototype.filter.call(usersSelect.options, function (o) { return o.selected; }).map(function (o) { return o.value; });
+
+                    if (!broadcastInput.checked && targetUserIds.length === 0) {
+                        setStatus('Selecciona al menos un usuario, o marca "Enviar a todos".');
+                        return;
+                    }
+
+                    var payload = { Title: title, Body: body, TargetUserIds: targetUserIds };
+                    var isEditing = editingId !== null;
+                    var url = isEditing ? ('/AdminMessages/' + editingId) : '/AdminMessages';
+                    var method = isEditing ? 'PUT' : 'POST';
+
+                    submitBtn.disabled = true;
+                    setStatus(isEditing ? 'Guardando...' : 'Publicando...');
+                    fetch(url, { method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) })
+                        .then(handleResponse)
+                        .then(function () {
+                            setStatus(isEditing ? 'Mensaje actualizado.' : 'Mensaje publicado.');
+                            resetForm();
+                            refreshList();
+                        })
+                        .catch(function (err) {
+                            setStatus('Error: ' + err.message);
+                        })
+                        .finally(function () {
+                            submitBtn.disabled = false;
+                        });
+                });
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    loadUsers().then(refreshList).finally(function () {
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
