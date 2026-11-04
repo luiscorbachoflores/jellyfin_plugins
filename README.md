@@ -68,6 +68,18 @@ Muestra un aviso emergente, una vez por semana (la semana se reinicia los vierne
 
 Código en [`src/WeeklyPick`](src/WeeklyPick).
 
+## Watchlist (Mi lista)
+
+Lista personal «para ver» por usuario (distinta de Favoritos). Botón «Añadir a mi lista» / «En mi lista» en la ficha de películas y series, y entrada «Mi lista» en el menú del usuario (junto a Perfil/Ajustes) que abre la lista a pantalla completa. Solo cliente web.
+
+- Para **Jellyfin 12.2** (.NET 10, `Jellyfin.Controller` 12.2.0). Store propio en SQLite (`<plugins>/Watchlist.Data/watchlist.db`), máximo 500 títulos por usuario; cada usuario solo ve y modifica la suya (ni un admin ve la de otros).
+- API: `GET /Watchlist`, `GET|POST|DELETE /Watchlist/Items/{itemId}`; 401 sin sesión, 404 si el usuario no puede ver el item, 400 si no es película/serie o se supera el límite.
+- **Acceso de emergencia:** si una versión futura de jellyfin-web rompe los anclajes de menú, abre `#/home?watchlist=open` (parámetro `watchlist=open` en el hash) y la lista se abre al cargar.
+- Diagnóstico: `localStorage['watchlist.debug'] = '1'` muestra en consola qué estrategia de anclaje encajó (`[Watchlist] menu: modern-app-user-menu`).
+- Tests: `dotnet test tests/Jellyfin.Plugin.Watchlist.Tests` y `node tests/watchlist-js/smoke.js` (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
+
+Código en [`src/Watchlist`](src/Watchlist).
+
 ## Desarrollo
 
 Cada plugin es un proyecto .NET independiente:
