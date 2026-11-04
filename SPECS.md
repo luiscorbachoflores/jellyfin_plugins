@@ -53,20 +53,20 @@ Jellyfin no tiene forma de que el administrador deje avisos persistentes a los u
 - Fuera de v1: notificaciones push/email, caducidad automática, adjuntos, respuestas del usuario al admin.
 
 **Modelo de datos**
-- `Message`: `Id (guid)`, `AdminUserId`, `Title`, `Body`, `CreatedUtc`, `TargetUserIds` (lista vacía = broadcast a todos).
+- `Message`: `Id (guid)`, `AdminUserId`, `Title`, `Body`, `Link (opcional)`, `CreatedUtc`, `TargetUserIds` (lista vacía = broadcast a todos).
 - `MessageRead`: `MessageId`, `UserId`, `ReadUtc`.
 - Persistencia embebida igual que Reviews (repositorio propio, sin depender de la BD core de Jellyfin).
 
 **API / endpoints**
-- `POST /AdminMessages` — crear (requiere `PermissionKind.IsAdministrator`).
+- `POST /AdminMessages` — crear (requiere `PermissionKind.IsAdministrator`); acepta `Link` opcional.
 - `GET /AdminMessages` — listar todos (admin).
 - `PUT /AdminMessages/{id}` / `DELETE /AdminMessages/{id}` — editar/borrar (admin; cualquier admin puede gestionar los de otro admin, no solo los propios).
 - `GET /AdminMessages/mine` — mensajes dirigidos al usuario autenticado (propios `UserId` + broadcast), con flag `isRead`.
 - `POST /AdminMessages/{id}/read` — marcar leído (usuario autenticado, solo sobre mensajes que le aplican).
 
 **UI / integración con jellyfin-web**
-- Página nueva en el dashboard de admin ("Mensajes") para crear/listar/borrar, igual de sencilla que la gestión existente de Reviews.
-- Icono con contador de no leídos en la barra del usuario normal (mismo patrón de inyección JS que usa JellyAsk en el menú), con desplegable listando mensajes y botón "marcar leído".
+- Página nueva en el dashboard de admin ("Mensajes") para crear/listar/borrar, igual de sencilla que la gestión existente de Reviews. Incluye campo opcional "Link".
+- Icono con contador de no leídos en la barra del usuario normal (mismo patrón de inyección JS que usa JellyAsk en el menú), con desplegable listando mensajes y botón "marcar leído". Si el mensaje tiene `Link`, se muestra como botón/enlace dentro de su entrada en el desplegable.
 
 **Compatibilidad**
 Fijar `Jellyfin.Controller`/`targetAbi` a la versión de producción vigente. No interfiere con Reviews/JellyAsk (entidades y rutas independientes).
@@ -78,3 +78,18 @@ En el contenedor POC: crear mensaje broadcast y dirigido, comprobar que un usuar
 - Sin caducidad: el mensaje queda hasta que el admin lo borra. *(asumido)*
 - Unidireccional: el usuario no puede responder. *(asumido)*
 - Sin aviso en vivo (WebSocket) en v1, solo bandeja persistente. *(asumido, se puede añadir después)*
+
+---
+
+## 0003 — Announcements (aviso de recap anual) → resuelto dentro de 0002
+
+**Estado:** ready (decisión de diseño cerrada 2026-11-04)
+
+**Problema / motivación**
+Avisar a todos los usuarios de que su recap anual está listo en `recap.titoteca.net`, con un aviso visible al entrar en Jellyfin.
+
+**Decisión:** no se construye como plugin aparte. Se detectó que es un subconjunto de AdminMessages (0002): un mensaje broadcast (sin `TargetUserIds`) con el campo `Link` opcional ya añadido ahí. Evita duplicar controller/repositorio/inyección JS por una funcionalidad casi idéntica.
+
+**Cómo se usa en la práctica:** cuando el recap esté listo, el admin crea un mensaje en AdminMessages sin destinatarios (broadcast) con `Link` = URL de `recap.titoteca.net`. No requiere cambios de código adicionales sobre lo ya especificado en 0002.
+
+**Fuera de alcance (de jellyfin_plugins, en cualquier caso):** `recap.titoteca.net` en sí — sitio aparte con login propio contra `/Users/AuthenticateByName` del Jellyfin real, scroll-scrubbing con `<canvas>`, narrativa de dos actos (cine/tele) + insignia privada. Brainstorming ya cerrado (narrativa, paleta oscura cálida + teal retro, tipografías Anton/Space Mono/Work Sans, spike visual aprobado), datos de Playback Reporting verificados (2309 registros). Pendiente: documento de diseño formal y luego implementación — es un proyecto propio, no parte de este repo.
