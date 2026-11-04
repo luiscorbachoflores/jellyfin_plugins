@@ -60,12 +60,12 @@ public class AdminMessagesController : ControllerBase
             return denied;
         }
 
-        if (!TryValidate(dto, out var title, out var body, out var error))
+        if (!TryValidate(dto, out var title, out var body, out var link, out var error))
         {
             return BadRequest(error);
         }
 
-        var record = _repository.Add(authInfo.UserId.ToString(), title, body, dto.TargetUserIds ?? new List<string>());
+        var record = _repository.Add(authInfo.UserId.ToString(), title, body, link, dto.TargetUserIds ?? new List<string>());
         return Ok(ToAdminDto(record));
     }
 
@@ -92,12 +92,12 @@ public class AdminMessagesController : ControllerBase
             return denied;
         }
 
-        if (!TryValidate(dto, out var title, out var body, out var error))
+        if (!TryValidate(dto, out var title, out var body, out var link, out var error))
         {
             return BadRequest(error);
         }
 
-        var updated = _repository.Update(id, title, body, dto.TargetUserIds ?? new List<string>());
+        var updated = _repository.Update(id, title, body, link, dto.TargetUserIds ?? new List<string>());
         if (updated is null)
         {
             return NotFound();
@@ -160,16 +160,33 @@ public class AdminMessagesController : ControllerBase
             || (authInfo.User is not null && authInfo.User.Permissions.Any(p => p.Kind == PermissionKind.IsAdministrator && p.Value));
     }
 
-    private static bool TryValidate(CreateMessageDto dto, out string title, out string body, out string? error)
+    private static bool TryValidate(CreateMessageDto dto, out string title, out string body, out string? link, out string? error)
     {
         title = (dto.Title ?? string.Empty).Trim();
         body = (dto.Body ?? string.Empty).Trim();
+        link = null;
         error = null;
 
         if (title.Length == 0 || body.Length == 0)
         {
             error = "Title y Body son obligatorios.";
             return false;
+        }
+
+        var trimmedLink = (dto.Link ?? string.Empty).Trim();
+        if (trimmedLink.Length > 0)
+        {
+            // Solo http(s) absoluto: Link se vuelca como href en el FAB del usuario, y
+            // un esquema distinto (javascript:, data:, ...) seria un vector de XSS
+            // persistente a traves de un mensaje guardado.
+            if (!Uri.TryCreate(trimmedLink, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                error = "Link debe ser una URL http(s) absoluta.";
+                return false;
+            }
+
+            link = trimmedLink;
         }
 
         if (dto.TargetUserIds is not null)
@@ -189,24 +206,26 @@ public class AdminMessagesController : ControllerBase
 
     private static AdminMessageDto ToAdminDto(MessageRecord record)
     {
-        return new AdminMessageDto(record.Id, record.AdminUserId, record.Title, record.Body, record.CreatedUtc, record.TargetUserIds);
+        return new AdminMessageDto(record.Id, record.AdminUserId, record.Title, record.Body, record.Link, record.CreatedUtc, record.TargetUserIds);
     }
 
     private static UserMessageDto ToUserDto(UserMessageRecord record)
     {
-        return new UserMessageDto(record.Id, record.Title, record.Body, record.CreatedUtc, record.IsRead);
+        return new UserMessageDto(record.Id, record.Title, record.Body, record.Link, record.CreatedUtc, record.IsRead);
     }
 }
 
-public record AdminMessageDto(Guid Id, string AdminUserId, string Title, string Body, string CreatedUtc, IReadOnlyList<string> TargetUserIds);
+public record AdminMessageDto(Guid Id, string AdminUserId, string Title, string Body, string? Link, string CreatedUtc, IReadOnlyList<string> TargetUserIds);
 
-public record UserMessageDto(Guid Id, string Title, string Body, string CreatedUtc, bool IsRead);
+public record UserMessageDto(Guid Id, string Title, string Body, string? Link, string CreatedUtc, bool IsRead);
 
 public class CreateMessageDto
 {
     public string Title { get; set; } = string.Empty;
 
     public string Body { get; set; } = string.Empty;
+
+    public string? Link { get; set; }
 
     public List<string>? TargetUserIds { get; set; } = new();
 }

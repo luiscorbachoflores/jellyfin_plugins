@@ -25,6 +25,7 @@
         '.adminMessageDate{font-size:.8em;opacity:.7;margin-bottom:.3em;}',
         '.adminMessageBody{font-size:.9em;white-space:pre-wrap;margin-bottom:.4em;}',
         '.adminMessageReadBtn{font-size:.8em;padding:.3em .8em;border-radius:4px;border:1px solid #555;background:transparent;color:inherit;cursor:pointer;}',
+        '.adminMessageLinkBtn{display:inline-block;font-size:.8em;padding:.3em .8em;margin:0 .5em .5em 0;border-radius:4px;background:#00a4dc;color:#fff;text-decoration:none;}',
         '.adminMessagesEmpty{opacity:.7;font-size:.9em;}'
     ].join('');
 
@@ -140,11 +141,15 @@
             var date = new Date(m.CreatedUtc);
             var dateStr = isNaN(date.getTime()) ? '' : date.toLocaleString();
             var readBtn = m.IsRead ? '' : '<button type="button" class="adminMessageReadBtn" data-id="' + m.Id + '">Marcar leído</button>';
+            var linkBtn = m.Link
+                ? '<a class="adminMessageLinkBtn" href="' + escapeHtml(m.Link) + '" target="_blank" rel="noopener noreferrer">Abrir enlace</a>'
+                : '';
             return '' +
                 '<div class="adminMessageItem' + (m.IsRead ? '' : ' isUnread') + '">' +
                 '  <div class="adminMessageTitle">' + escapeHtml(m.Title) + '</div>' +
                 '  <div class="adminMessageDate">' + dateStr + '</div>' +
                 '  <div class="adminMessageBody">' + escapeHtml(m.Body) + '</div>' +
+                linkBtn +
                 readBtn +
                 '</div>';
         }).join('');

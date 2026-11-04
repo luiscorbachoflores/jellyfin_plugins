@@ -31,7 +31,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void Add_Broadcast_HasNoTargetUserIds()
     {
-        var record = _repository.Add("admin-1", "Mantenimiento", "El servidor reiniciará esta noche.", Array.Empty<string>());
+        var record = _repository.Add("admin-1", "Mantenimiento", "El servidor reiniciará esta noche.", null, Array.Empty<string>());
 
         Assert.NotEqual(Guid.Empty, record.Id);
         Assert.Empty(record.TargetUserIds);
@@ -40,7 +40,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void GetForUser_BroadcastMessage_AppliesToAnyUser()
     {
-        _repository.Add("admin-1", "Mantenimiento", "Cuerpo", Array.Empty<string>());
+        _repository.Add("admin-1", "Mantenimiento", "Cuerpo", null, Array.Empty<string>());
 
         var forAlice = _repository.GetForUser("alice");
         var forBob = _repository.GetForUser("bob");
@@ -52,7 +52,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void GetForUser_TargetedMessage_OnlyAppliesToTargetUsers()
     {
-        _repository.Add("admin-1", "Para Alice", "Cuerpo", new[] { "alice" });
+        _repository.Add("admin-1", "Para Alice", "Cuerpo", null, new[] { "alice" });
 
         var forAlice = _repository.GetForUser("alice");
         var forBob = _repository.GetForUser("bob");
@@ -64,9 +64,9 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void GetForUser_MixesBroadcastAndOwnTargeted_NotOthersTargeted()
     {
-        _repository.Add("admin-1", "Broadcast", "Cuerpo", Array.Empty<string>());
-        _repository.Add("admin-1", "Para Alice", "Cuerpo", new[] { "alice" });
-        _repository.Add("admin-1", "Para Bob", "Cuerpo", new[] { "bob" });
+        _repository.Add("admin-1", "Broadcast", "Cuerpo", null, Array.Empty<string>());
+        _repository.Add("admin-1", "Para Alice", "Cuerpo", null, new[] { "alice" });
+        _repository.Add("admin-1", "Para Bob", "Cuerpo", null, new[] { "bob" });
 
         var forAlice = _repository.GetForUser("alice");
 
@@ -79,7 +79,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void GetForUser_IsReadFlag_FalseUntilMarkedRead()
     {
-        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", Array.Empty<string>());
+        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", null, Array.Empty<string>());
 
         var before = _repository.GetForUser("alice").Single();
         Assert.False(before.IsRead);
@@ -93,7 +93,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void MarkRead_IsIdempotent()
     {
-        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", Array.Empty<string>());
+        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", null, Array.Empty<string>());
 
         _repository.MarkRead(record.Id, "alice");
         _repository.MarkRead(record.Id, "alice");
@@ -106,7 +106,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void MarkRead_DoesNotAffectOtherUsersReadState()
     {
-        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", Array.Empty<string>());
+        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", null, Array.Empty<string>());
 
         _repository.MarkRead(record.Id, "alice");
 
@@ -117,8 +117,8 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void AppliesToUser_TrueForBroadcast_FalseForUnrelatedTargetedMessage()
     {
-        var broadcast = _repository.Add("admin-1", "Broadcast", "Cuerpo", Array.Empty<string>());
-        var targeted = _repository.Add("admin-1", "Para Alice", "Cuerpo", new[] { "alice" });
+        var broadcast = _repository.Add("admin-1", "Broadcast", "Cuerpo", null, Array.Empty<string>());
+        var targeted = _repository.Add("admin-1", "Para Alice", "Cuerpo", null, new[] { "alice" });
 
         Assert.True(_repository.AppliesToUser(broadcast.Id, "bob"));
         Assert.True(_repository.AppliesToUser(targeted.Id, "alice"));
@@ -128,9 +128,9 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void Update_ChangesTitleBodyAndTargets()
     {
-        var record = _repository.Add("admin-1", "Original", "Cuerpo original", new[] { "alice" });
+        var record = _repository.Add("admin-1", "Original", "Cuerpo original", null, new[] { "alice" });
 
-        var updated = _repository.Update(record.Id, "Editado", "Cuerpo editado", new[] { "bob" });
+        var updated = _repository.Update(record.Id, "Editado", "Cuerpo editado", null, new[] { "bob" });
 
         Assert.NotNull(updated);
         Assert.Equal("Editado", updated!.Title);
@@ -143,7 +143,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void Update_UnknownId_ReturnsNull()
     {
-        var updated = _repository.Update(Guid.NewGuid(), "Editado", "Cuerpo", Array.Empty<string>());
+        var updated = _repository.Update(Guid.NewGuid(), "Editado", "Cuerpo", null, Array.Empty<string>());
 
         Assert.Null(updated);
     }
@@ -151,7 +151,7 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void Delete_RemovesMessageTargetsAndReads()
     {
-        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", new[] { "alice" });
+        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", null, new[] { "alice" });
         _repository.MarkRead(record.Id, "alice");
 
         var deleted = _repository.Delete(record.Id);
@@ -172,8 +172,8 @@ public class AdminMessagesRepositoryTests : IDisposable
     [Fact]
     public void GetAll_ReturnsEveryMessageWithTargetsForAdminView()
     {
-        _repository.Add("admin-1", "Broadcast", "Cuerpo", Array.Empty<string>());
-        _repository.Add("admin-2", "Para Alice", "Cuerpo", new[] { "alice" });
+        _repository.Add("admin-1", "Broadcast", "Cuerpo", null, Array.Empty<string>());
+        _repository.Add("admin-2", "Para Alice", "Cuerpo", null, new[] { "alice" });
 
         var all = _repository.GetAll();
 
@@ -186,5 +186,78 @@ public class AdminMessagesRepositoryTests : IDisposable
     public void GetById_UnknownId_ReturnsNull()
     {
         Assert.Null(_repository.GetById(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Add_WithLink_PersistsLinkEverywhere()
+    {
+        var record = _repository.Add("admin-1", "Recap anual", "Ya está listo", "https://recap.titoteca.net", Array.Empty<string>());
+
+        Assert.Equal("https://recap.titoteca.net", record.Link);
+        Assert.Equal("https://recap.titoteca.net", _repository.GetById(record.Id)!.Link);
+        Assert.Equal("https://recap.titoteca.net", _repository.GetForUser("alice").Single().Link);
+        Assert.Equal("https://recap.titoteca.net", _repository.GetAll().Single().Link);
+    }
+
+    [Fact]
+    public void Add_WithoutLink_LinkIsNullEverywhere()
+    {
+        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", null, Array.Empty<string>());
+
+        Assert.Null(record.Link);
+        Assert.Null(_repository.GetById(record.Id)!.Link);
+        Assert.Null(_repository.GetForUser("alice").Single().Link);
+        Assert.Null(_repository.GetAll().Single().Link);
+    }
+
+    [Fact]
+    public void Update_CanSetAndClearLink()
+    {
+        var record = _repository.Add("admin-1", "Aviso", "Cuerpo", null, Array.Empty<string>());
+
+        var withLink = _repository.Update(record.Id, "Aviso", "Cuerpo", "https://example.com/recap", Array.Empty<string>());
+        Assert.Equal("https://example.com/recap", withLink!.Link);
+
+        var withoutLink = _repository.Update(record.Id, "Aviso", "Cuerpo", null, Array.Empty<string>());
+        Assert.Null(withoutLink!.Link);
+    }
+
+    [Fact]
+    public void ExistingDatabaseWithoutLinkColumn_MigratesOnOpen()
+    {
+        // Simula una base creada por una version anterior de este plugin (antes del
+        // spec 0003), sin la columna Link: EnsureLinkColumn debe anadirla sola al abrir.
+        var legacyDbPath = Path.Combine(Path.GetTempPath(), $"adminmessages-legacy-{Guid.NewGuid()}.db");
+        try
+        {
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={legacyDbPath}"))
+            {
+                connection.Open();
+                var cmd = connection.CreateCommand();
+                cmd.CommandText = @"CREATE TABLE Messages (
+                    Id TEXT PRIMARY KEY,
+                    AdminUserId TEXT NOT NULL,
+                    Title TEXT NOT NULL,
+                    Body TEXT NOT NULL,
+                    CreatedUtc TEXT NOT NULL
+                );";
+                cmd.ExecuteNonQuery();
+            }
+
+            var legacyRepository = new AdminMessagesRepository(legacyDbPath);
+            var record = legacyRepository.Add("admin-1", "Aviso", "Cuerpo", "https://example.com", Array.Empty<string>());
+
+            Assert.Equal("https://example.com", legacyRepository.GetById(record.Id)!.Link);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(legacyDbPath);
+            }
+            catch (IOException)
+            {
+            }
+        }
     }
 }

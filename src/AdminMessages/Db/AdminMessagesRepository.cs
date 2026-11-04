@@ -5,9 +5,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Jellyfin.Plugin.AdminMessages.Db;
 
-public record MessageRecord(Guid Id, string AdminUserId, string Title, string Body, string CreatedUtc, IReadOnlyList<string> TargetUserIds);
+public record MessageRecord(Guid Id, string AdminUserId, string Title, string Body, string? Link, string CreatedUtc, IReadOnlyList<string> TargetUserIds);
 
-public record UserMessageRecord(Guid Id, string Title, string Body, string CreatedUtc, bool IsRead);
+public record UserMessageRecord(Guid Id, string Title, string Body, string? Link, string CreatedUtc, bool IsRead);
 
 public class AdminMessagesRepository
 {
@@ -44,9 +44,34 @@ public class AdminMessagesRepository
                 PRIMARY KEY (MessageId, UserId)
             );";
         cmd.ExecuteNonQuery();
+
+        EnsureLinkColumn(connection);
     }
 
-    public MessageRecord Add(string adminUserId, string title, string body, IReadOnlyList<string> targetUserIds)
+    // Migración simple: Link se añadió después de la primera versión de este plugin
+    // (spec 0003). Sin despliegues reales de por medio, pero una base ya creada en
+    // local durante pruebas no tendría la columna todavía.
+    private static void EnsureLinkColumn(SqliteConnection connection)
+    {
+        var pragma = connection.CreateCommand();
+        pragma.CommandText = "PRAGMA table_info(Messages)";
+        using var reader = pragma.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), "Link", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        reader.Close();
+
+        var alter = connection.CreateCommand();
+        alter.CommandText = "ALTER TABLE Messages ADD COLUMN Link TEXT NULL";
+        alter.ExecuteNonQuery();
+    }
+
+    public MessageRecord Add(string adminUserId, string title, string body, string? link, IReadOnlyList<string> targetUserIds)
     {
         var id = Guid.NewGuid();
         var createdUtc = DateTime.UtcNow.ToString("o");
@@ -57,18 +82,19 @@ public class AdminMessagesRepository
 
         var insertMessage = connection.CreateCommand();
         insertMessage.Transaction = transaction;
-        insertMessage.CommandText = "INSERT INTO Messages (Id, AdminUserId, Title, Body, CreatedUtc) VALUES ($id, $adminUserId, $title, $body, $createdUtc)";
+        insertMessage.CommandText = "INSERT INTO Messages (Id, AdminUserId, Title, Body, Link, CreatedUtc) VALUES ($id, $adminUserId, $title, $body, $link, $createdUtc)";
         insertMessage.Parameters.AddWithValue("$id", id.ToString());
         insertMessage.Parameters.AddWithValue("$adminUserId", adminUserId);
         insertMessage.Parameters.AddWithValue("$title", title);
         insertMessage.Parameters.AddWithValue("$body", body);
+        insertMessage.Parameters.AddWithValue("$link", (object?)link ?? DBNull.Value);
         insertMessage.Parameters.AddWithValue("$createdUtc", createdUtc);
         insertMessage.ExecuteNonQuery();
 
         InsertTargets(connection, transaction, id, targetUserIds);
 
         transaction.Commit();
-        return new MessageRecord(id, adminUserId, title, body, createdUtc, targetUserIds);
+        return new MessageRecord(id, adminUserId, title, body, link, createdUtc, targetUserIds);
     }
 
     public IReadOnlyList<MessageRecord> GetAll()
@@ -76,7 +102,7 @@ public class AdminMessagesRepository
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, AdminUserId, Title, Body, CreatedUtc FROM Messages ORDER BY datetime(CreatedUtc) DESC";
+        cmd.CommandText = "SELECT Id, AdminUserId, Title, Body, CreatedUtc, Link FROM Messages ORDER BY datetime(CreatedUtc) DESC";
 
         var results = new List<MessageRecord>();
         using var reader = cmd.ExecuteReader();
@@ -97,7 +123,7 @@ public class AdminMessagesRepository
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, AdminUserId, Title, Body, CreatedUtc FROM Messages WHERE Id = $id";
+        cmd.CommandText = "SELECT Id, AdminUserId, Title, Body, CreatedUtc, Link FROM Messages WHERE Id = $id";
         cmd.Parameters.AddWithValue("$id", id.ToString());
 
         using var reader = cmd.ExecuteReader();
@@ -111,7 +137,7 @@ public class AdminMessagesRepository
         return record with { TargetUserIds = GetTargets(connection, id) };
     }
 
-    public MessageRecord? Update(Guid id, string title, string body, IReadOnlyList<string> targetUserIds)
+    public MessageRecord? Update(Guid id, string title, string body, string? link, IReadOnlyList<string> targetUserIds)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
@@ -119,9 +145,10 @@ public class AdminMessagesRepository
 
         var update = connection.CreateCommand();
         update.Transaction = transaction;
-        update.CommandText = "UPDATE Messages SET Title = $title, Body = $body WHERE Id = $id";
+        update.CommandText = "UPDATE Messages SET Title = $title, Body = $body, Link = $link WHERE Id = $id";
         update.Parameters.AddWithValue("$title", title);
         update.Parameters.AddWithValue("$body", body);
+        update.Parameters.AddWithValue("$link", (object?)link ?? DBNull.Value);
         update.Parameters.AddWithValue("$id", id.ToString());
         var affected = update.ExecuteNonQuery();
 
@@ -177,7 +204,7 @@ public class AdminMessagesRepository
         connection.Open();
         var cmd = connection.CreateCommand();
         cmd.CommandText = @"
-            SELECT m.Id, m.Title, m.Body, m.CreatedUtc,
+            SELECT m.Id, m.Title, m.Body, m.CreatedUtc, m.Link,
                    CASE WHEN r.UserId IS NULL THEN 0 ELSE 1 END AS IsRead
             FROM Messages m
             LEFT JOIN MessageReads r ON r.MessageId = m.Id AND r.UserId = $userId
@@ -194,8 +221,9 @@ public class AdminMessagesRepository
                 Guid.Parse(reader.GetString(0)),
                 reader.GetString(1),
                 reader.GetString(2),
+                reader.IsDBNull(4) ? null : reader.GetString(4),
                 reader.GetString(3),
-                reader.GetInt64(4) == 1));
+                reader.GetInt64(5) == 1));
         }
 
         return results;
@@ -262,6 +290,9 @@ public class AdminMessagesRepository
         return targets;
     }
 
+    // Columnas leidas en orden: Id, AdminUserId, Title, Body, CreatedUtc, Link (ver los
+    // SELECT de GetAll/GetById). El record en si va Id, AdminUserId, Title, Body, Link,
+    // CreatedUtc, TargetUserIds: cuidado al no confundir los indices con el orden del ctor.
     private static MessageRecord ReadMessage(SqliteDataReader reader)
     {
         return new MessageRecord(
@@ -269,6 +300,7 @@ public class AdminMessagesRepository
             reader.GetString(1),
             reader.GetString(2),
             reader.GetString(3),
+            reader.IsDBNull(5) ? null : reader.GetString(5),
             reader.GetString(4),
             Array.Empty<string>());
     }

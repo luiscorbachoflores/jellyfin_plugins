@@ -70,7 +70,9 @@ Código en [`src/WeeklyPick`](src/WeeklyPick).
 
 ## AdminMessages
 
-Bandeja de avisos persistentes del administrador: desde una página del panel ("Mensajes") se crean/editan/borran mensajes (título + cuerpo) dirigidos a todos los usuarios o a una lista concreta. Cada usuario los ve en un desplegable con contador de no leídos y puede marcarlos como leídos. Sin caducidad automática, unidireccional (el usuario no responde) y sin aviso en vivo por WebSocket en esta v1 — ver `SPECS.md` (rama `specs`, sección 0002) para el detalle y los defaults asumidos.
+Bandeja de avisos persistentes del administrador: desde una página del panel ("Mensajes") se crean/editan/borran mensajes (título + cuerpo + link opcional) dirigidos a todos los usuarios o a una lista concreta. Cada usuario los ve en un desplegable con contador de no leídos, botón "Abrir enlace" si el mensaje lleva uno, y puede marcarlos como leídos. Sin caducidad automática, unidireccional (el usuario no responde) y sin aviso en vivo por WebSocket en esta v1 — ver `SPECS.md` (rama `specs`, sección 0002) para el detalle y los defaults asumidos.
+
+El campo `Link` (spec 0003) absorbe el caso de uso "Announcements" (avisar de que el recap anual está listo en una URL externa): en vez de un plugin aparte, es un mensaje broadcast con `Link` a esa URL.
 
 - Solo para **Jellyfin 12.2** (.NET 10, `Jellyfin.Controller`/`Jellyfin.Model` 12.2.0, targetAbi `12.2.0.0`) — **sin confirmar en vivo contra la Pi en esta sesión**, ver TODO en el `.csproj`.
 - API: `POST/GET /AdminMessages` y `PUT/DELETE /AdminMessages/{id}` (admin); `GET /AdminMessages/mine` y `POST /AdminMessages/{id}/read` (usuario autenticado). Persistencia SQLite propia.

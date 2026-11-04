@@ -20,6 +20,11 @@
                         <label class="inputLabel inputLabelUnfocused" for="AdminMessageBody">Mensaje</label>
                         <textarea is="emby-textarea" id="AdminMessageBody" name="Body" required class="emby-textarea"></textarea>
                     </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="AdminMessageLink">Link (opcional)</label>
+                        <input is="emby-input" type="url" id="AdminMessageLink" name="Link" placeholder="https://..." />
+                        <div class="fieldDescription">Si lo rellenas, el usuario verá un botón que abre esta URL en una pestaña nueva.</div>
+                    </div>
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label>
                             <input is="emby-checkbox" type="checkbox" id="AdminMessageBroadcast" checked />
@@ -54,6 +59,7 @@
                 var form = page.querySelector('#AdminMessagesForm');
                 var titleInput = page.querySelector('#AdminMessageTitle');
                 var bodyInput = page.querySelector('#AdminMessageBody');
+                var linkInput = page.querySelector('#AdminMessageLink');
                 var broadcastInput = page.querySelector('#AdminMessageBroadcast');
                 var usersContainer = page.querySelector('#AdminMessageUsersContainer');
                 var usersSelect = page.querySelector('#AdminMessageUsers');
@@ -142,11 +148,15 @@
                         listEl.innerHTML = messages.map(function (m) {
                             var date = new Date(m.CreatedUtc);
                             var dateStr = isNaN(date.getTime()) ? '' : date.toLocaleString();
-                            return '' +
+                            var linkHtml = m.Link
+                                ? '  <div style="font-size:.85em;margin-bottom:.4em;"><a href="' + escapeHtml(m.Link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(m.Link) + '</a></div>'
+                                : '';
+                        return '' +
                                 '<div class="listItem" data-id="' + m.Id + '" style="padding:.8em 0;border-top:1px solid rgba(128,128,128,.3);">' +
                                 '  <div style="font-weight:600;">' + escapeHtml(m.Title) + '</div>' +
                                 '  <div style="font-size:.85em;opacity:.75;">' + dateStr + ' &middot; ' + escapeHtml(userNames(m.TargetUserIds)) + '</div>' +
                                 '  <div style="margin:.4em 0;white-space:pre-wrap;">' + escapeHtml(m.Body) + '</div>' +
+                                linkHtml +
                                 '  <button is="emby-button" type="button" class="raised adminMessageEditBtn">Editar</button>' +
                                 '  <button is="emby-button" type="button" class="raised adminMessageDeleteBtn">Eliminar</button>' +
                                 '</div>';
@@ -182,6 +192,7 @@
                             editingId = id;
                             titleInput.value = m.Title;
                             bodyInput.value = m.Body;
+                            linkInput.value = m.Link || '';
                             var targets = m.TargetUserIds || [];
                             broadcastInput.checked = targets.length === 0;
                             toggleUsersContainer();
@@ -213,7 +224,8 @@
                         return;
                     }
 
-                    var payload = { Title: title, Body: body, TargetUserIds: targetUserIds };
+                    var link = linkInput.value.trim();
+                    var payload = { Title: title, Body: body, Link: link || null, TargetUserIds: targetUserIds };
                     var isEditing = editingId !== null;
                     var url = isEditing ? ('/AdminMessages/' + editingId) : '/AdminMessages';
                     var method = isEditing ? 'PUT' : 'POST';
