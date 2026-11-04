@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blog</title>
+</head>
+<body>
+    <div id="BlogConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="BlogConfigForm">
+                    <div class="verticalSection">
+                        <h2>Blog</h2>
+                        <p>Blog de cine compartido: cualquier usuario con sesión lee y publica en <code>#/blog</code>. Aquí ajustas el título, la descripción y si aparece en el menú lateral.</p>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="BlogTitle">Título del blog</label>
+                        <input is="emby-input" type="text" id="BlogTitle" name="Title" maxlength="100" />
+                        <div class="fieldDescription">Por defecto «Blog de cine».</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="BlogDescription">Descripción</label>
+                        <input is="emby-input" type="text" id="BlogDescription" name="Description" maxlength="300" />
+                        <div class="fieldDescription">Se muestra bajo el título. Por defecto «Lo que vemos, lo que nos gusta y lo que no.».</div>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="BlogShowInMenu" name="ShowInMenu" />
+                            <span>Mostrar «Blog» en el menú lateral</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Añade el enlace a <code>menuLinks</code> de <code>/web/config.json</code>, conservando los enlaces que ya tuvieras. Los clientes web lo recogen al recargar la página.</div>
+                    </div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Guardar</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = "1660e20b-ec3d-4424-91b0-4253e12de3c2";
+
+                document.querySelector("#BlogConfigPage").addEventListener("pageshow", function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        document.querySelector("#BlogTitle").value = config.Title || "";
+                        document.querySelector("#BlogDescription").value = config.Description || "";
+                        document.querySelector("#BlogShowInMenu").checked = config.ShowInMenu !== false;
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+                document.querySelector("#BlogConfigForm").addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.Title = document.querySelector("#BlogTitle").value.trim();
+                        config.Description = document.querySelector("#BlogDescription").value.trim();
+                        config.ShowInMenu = document.querySelector("#BlogShowInMenu").checked;
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

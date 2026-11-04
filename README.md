@@ -68,6 +68,19 @@ Muestra un aviso emergente, una vez por semana (la semana se reinicia los vierne
 
 Código en [`src/WeeklyPick`](src/WeeklyPick).
 
+## Blog
+
+Blog de cine compartido, al estilo de los blogs clásicos de Blogspot: cualquier usuario con sesión lee y publica entradas (texto plano, etiquetas, títulos de la biblioteca mencionados, marca de spoilers) y comenta. Pantalla propia en `#/blog` con columna lateral (buscador, archivo por año y mes, etiquetas, colaboradores y comentarios recientes). El autor edita y borra lo suyo; un admin puede borrar (no editar) contenido ajeno.
+
+- Para **Jellyfin 12.2** (.NET 10, `Jellyfin.Controller` 12.2.0). Store propio en SQLite (`<plugins>/Blog.Data/blog.db`).
+- La pantalla se pinta dentro de la ruta comodín de jellyfin-web (`#fallbackPage`), con su cabecera y tema; todo el texto de usuarios se inserta como texto, nunca como HTML.
+- Entrada «Blog» en el menú lateral de los dos layouts mediante `menuLinks` de `/web/config.json` (un middleware la añade sin tocar los enlaces del admin). Se puede desactivar en la configuración del plugin (`ShowInMenu`), junto con el título y la descripción del blog.
+- API (`/Blog`): `Info`, `Posts`, `Posts/{id}`, `Posts/{id}/Comments`, `Comments/{id}`, `Sidebar`; 401 sin sesión.
+- Diagnóstico: `localStorage['blog.debug'] = '1'`.
+- Tests: `dotnet test tests/Jellyfin.Plugin.Blog.Tests` y `node tests/blog-js/smoke.js` (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
+
+Código en [`src/Blog`](src/Blog).
+
 ## Desarrollo
 
 Cada plugin es un proyecto .NET independiente:
