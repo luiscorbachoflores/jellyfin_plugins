@@ -173,20 +173,9 @@ public class AdminMessagesController : ControllerBase
             return false;
         }
 
-        var trimmedLink = (dto.Link ?? string.Empty).Trim();
-        if (trimmedLink.Length > 0)
+        if (!LinkPolicy.TryNormalize(dto.Link, out link, out error))
         {
-            // Solo http(s) absoluto: Link se vuelca como href en el FAB del usuario, y
-            // un esquema distinto (javascript:, data:, ...) seria un vector de XSS
-            // persistente a traves de un mensaje guardado.
-            if (!Uri.TryCreate(trimmedLink, UriKind.Absolute, out var uri)
-                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            {
-                error = "Link debe ser una URL http(s) absoluta.";
-                return false;
-            }
-
-            link = trimmedLink;
+            return false;
         }
 
         if (dto.TargetUserIds is not null)

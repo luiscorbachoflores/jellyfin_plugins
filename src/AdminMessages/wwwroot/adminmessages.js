@@ -58,10 +58,14 @@
         return !!(c && c.accessToken && c.accessToken());
     }
 
+    // Tambien escapa comillas: el resultado se usa dentro de atributos (href, data-id).
     function escapeHtml(str) {
-        var div = document.createElement('div');
-        div.textContent = str == null ? '' : String(str);
-        return div.innerHTML;
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     function fetchMine() {
