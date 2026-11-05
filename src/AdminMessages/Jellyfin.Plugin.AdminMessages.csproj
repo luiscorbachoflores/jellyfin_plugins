@@ -13,14 +13,8 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <!--
-    TODO: confirmar targetAbi contra producción.
-    Jellyfin.Controller/Jellyfin.Model se fijan aquí a 12.2.0 porque es el ABI que
-    manifest.json ya da por promovido a producción para Reviews 1.5.1.0 / JellyAsk 1.3.0.0
-    (y el que usa WeeklyPick en su .csproj actual), pero nadie lo ha confirmado en vivo
-    contra la Pi durante esta sesión (sin acceso a esa red desde aquí). Revisar
-    config/plugins en el servidor real antes de cualquier release.
-  -->
+  <!-- targetAbi 12.2.0 confirmado contra la Pi (jellyfin/jellyfin:12.2 en producción) y contra
+       un 12.2 real en el POC de vm-titopc2: carga limpio, sin "not supported". -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Jellyfin.Controller" Version="12.2.0" ExcludeAssets="runtime" />

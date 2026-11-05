@@ -49,7 +49,18 @@
 
                 <div class="verticalSection">
                     <h2>Mensajes existentes</h2>
-                    <div id="AdminMessagesList"><p>Cargando...</p></div>
+                    <table id="AdminMessagesTable" style="width:100%;border-collapse:collapse;text-align:left">
+                        <thead>
+                            <tr>
+                                <th style="padding:.4em">Título</th>
+                                <th style="padding:.4em">Mensaje</th>
+                                <th style="padding:.4em">Fecha</th>
+                                <th style="padding:.4em">Destinatarios</th>
+                                <th style="padding:.4em"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="AdminMessagesList"><tr><td colspan="5" style="padding:.4em;opacity:.7">Cargando...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -143,50 +154,66 @@
                 });
 
                 function refreshList() {
-                    listEl.innerHTML = '<p>Cargando...</p>';
+                    listEl.innerHTML = '<tr><td colspan="5" style="padding:.4em;opacity:.7">Cargando...</td></tr>';
                     fetch('/AdminMessages', { headers: authHeaders() }).then(handleResponse).then(function (messages) {
                         if (!messages || messages.length === 0) {
-                            listEl.innerHTML = '<p>Todavía no hay mensajes.</p>';
+                            listEl.innerHTML = '<tr><td colspan="5" style="padding:.4em;opacity:.7">Todavía no hay mensajes.</td></tr>';
                             return;
                         }
                         listEl.innerHTML = messages.map(function (m) {
                             var date = new Date(m.CreatedUtc);
                             var dateStr = isNaN(date.getTime()) ? '' : date.toLocaleString();
                             var linkHtml = m.Link
-                                ? '  <div style="font-size:.85em;margin-bottom:.4em;"><a href="' + escapeHtml(m.Link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(m.Link) + '</a></div>'
+                                ? '<div style="font-size:.85em;margin-top:.3em;"><a href="' + escapeHtml(m.Link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(m.Link) + '</a></div>'
                                 : '';
-                        return '' +
-                                '<div class="listItem" data-id="' + m.Id + '" style="padding:.8em 0;border-top:1px solid rgba(128,128,128,.3);">' +
-                                '  <div style="font-weight:600;">' + escapeHtml(m.Title) + '</div>' +
-                                '  <div style="font-size:.85em;opacity:.75;">' + dateStr + ' &middot; ' + escapeHtml(userNames(m.TargetUserIds)) + '</div>' +
-                                '  <div style="margin:.4em 0;white-space:pre-wrap;">' + escapeHtml(m.Body) + '</div>' +
-                                linkHtml +
-                                '  <button is="emby-button" type="button" class="raised adminMessageEditBtn">Editar</button>' +
-                                '  <button is="emby-button" type="button" class="raised adminMessageDeleteBtn">Eliminar</button>' +
-                                '</div>';
+                            return '' +
+                                '<tr data-id="' + m.Id + '" style="border-top:1px solid rgba(128,128,128,.25);vertical-align:top;">' +
+                                '<td style="padding:.5em .4em;font-weight:600;">' + escapeHtml(m.Title) + '</td>' +
+                                '<td style="padding:.5em .4em;white-space:pre-wrap;max-width:28em;">' + escapeHtml(m.Body) + linkHtml + '</td>' +
+                                '<td style="padding:.5em .4em;white-space:nowrap;">' + dateStr + '</td>' +
+                                '<td style="padding:.5em .4em;">' + escapeHtml(userNames(m.TargetUserIds)) + '</td>' +
+                                '<td style="padding:.5em .4em;white-space:nowrap;">' +
+                                '<button is="emby-button" type="button" class="raised adminMessageEditBtn" style="padding:.2em .8em;">Editar</button> ' +
+                                '<button is="emby-button" type="button" class="raised adminMessageDeleteBtn" style="padding:.2em .8em;">Eliminar</button>' +
+                                '</td>' +
+                                '</tr>';
                         }).join('');
                     }).catch(function (err) {
-                        listEl.innerHTML = '<p>No se pudieron cargar los mensajes (' + escapeHtml(err.message) + ').</p>';
+                        listEl.innerHTML = '<tr><td colspan="5" style="padding:.4em;opacity:.7">No se pudieron cargar los mensajes (' + escapeHtml(err.message) + ').</td></tr>';
                     });
                 }
 
                 listEl.addEventListener('click', function (evt) {
-                    var item = evt.target.closest('.listItem');
-                    if (!item) {
+                    var row = evt.target.closest('tr[data-id]');
+                    if (!row) {
                         return;
                     }
-                    var id = item.getAttribute('data-id');
-                    if (evt.target.closest('.adminMessageDeleteBtn')) {
-                        if (window.confirm('¿Eliminar este mensaje?')) {
-                            fetch('/AdminMessages/' + id, { method: 'DELETE', headers: authHeaders() }).then(handleResponse).then(function () {
-                                if (editingId === id) {
-                                    resetForm();
+                    var id = row.getAttribute('data-id');
+                    var deleteBtn = evt.target.closest('.adminMessageDeleteBtn');
+                    if (deleteBtn) {
+                        // Sin window.confirm (bloquea la pestaña entera): primer clic arma el
+                        // boton, segundo clic en los 4s siguientes confirma el borrado.
+                        if (deleteBtn.getAttribute('data-armed') !== '1') {
+                            deleteBtn.setAttribute('data-armed', '1');
+                            deleteBtn.textContent = '¿Seguro?';
+                            setTimeout(function () {
+                                if (deleteBtn.isConnected && deleteBtn.getAttribute('data-armed') === '1') {
+                                    deleteBtn.removeAttribute('data-armed');
+                                    deleteBtn.textContent = 'Eliminar';
                                 }
-                                refreshList();
-                            }).catch(function (err) {
-                                setStatus('Error al eliminar: ' + err.message);
-                            });
+                            }, 4000);
+                            return;
                         }
+                        deleteBtn.disabled = true;
+                        fetch('/AdminMessages/' + id, { method: 'DELETE', headers: authHeaders() }).then(handleResponse).then(function () {
+                            if (editingId === id) {
+                                resetForm();
+                            }
+                            refreshList();
+                        }).catch(function (err) {
+                            deleteBtn.disabled = false;
+                            setStatus('Error al eliminar: ' + err.message);
+                        });
                     } else if (evt.target.closest('.adminMessageEditBtn')) {
                         fetch('/AdminMessages', { headers: authHeaders() }).then(handleResponse).then(function (messages) {
                             var m = (messages || []).filter(function (x) { return x.Id === id; })[0];

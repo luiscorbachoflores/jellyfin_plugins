@@ -16,7 +16,7 @@
     var BELL_PATH = 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z';
 
     var STYLE = [
-        '.adminMessagesBadge{position:absolute;top:.15em;right:.15em;min-width:1.3em;height:1.3em;border-radius:1em;background:#cc3333;color:#fff;font-size:.68em;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 .25em;pointer-events:none;}',
+        '.adminMessagesBadge{position:absolute;top:0;right:0;transform:translate(35%,-35%);min-width:15px;height:15px;border-radius:8px;background:#cc3333;color:#fff;font-size:10px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none;box-sizing:border-box;}',
         '.adminMessagesBadge.hide{display:none;}',
         '.adminMessagesPanel{position:fixed;width:22em;max-width:85vw;max-height:60vh;overflow-y:auto;background:#1c1c1c;border-radius:8px;padding:1em;box-shadow:0 4px 24px rgba(0,0,0,.5);z-index:9001;}',
         '.adminMessagesPanel.hide{display:none;}',
@@ -116,27 +116,14 @@
     var pollTimer = null;
     var currentMessages = [];
 
-    // Elemento nuevo del mismo tag con las clases e innerHTML del hermano (la lupa), igual que
-    // hace Watchlist con las entradas de menu: hereda el aspecto nativo sin tocar el original.
-    function buildIcon(anchor) {
-        var el = document.createElement(anchor.tagName);
-        el.className = anchor.className;
-        el.innerHTML = anchor.innerHTML;
-        Array.prototype.forEach.call(el.querySelectorAll('[id]'), function (n) { n.removeAttribute('id'); });
-        el.removeAttribute('href');
-        el.style.position = 'relative';
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
+    // Comun a los dos layouts: posicion relativa (para el badge), marcador idempotente,
+    // badge propio y el click que abre el panel. Lo especifico de cada icono (sustituir el
+    // svg del moderno o el .material-icons del legacy) lo hace cada build* antes de llamar aqui.
+    function finishIcon(el) {
         el.setAttribute('data-adminmessages', 'icon');
         el.setAttribute('title', LABEL);
         el.setAttribute('aria-label', LABEL);
-
-        var svg = el.querySelector('svg');
-        if (svg) {
-            svg.removeAttribute('data-testid');
-            svg.setAttribute('viewBox', '0 0 24 24');
-            svg.innerHTML = '<path d="' + BELL_PATH + '"></path>';
-        }
+        el.style.position = 'relative';
 
         badge = document.createElement('span');
         badge.className = 'adminMessagesBadge hide';
@@ -148,6 +135,29 @@
             evt.stopPropagation();
             togglePanel();
         });
+        return el;
+    }
+
+    // Layout moderno: MuiIconButton (<a>) con un <svg><path>. Elemento nuevo con las clases e
+    // innerHTML del hermano (la lupa), igual que hace Watchlist con las entradas de menu: hereda
+    // el aspecto nativo sin tocar el original.
+    function buildIconModern(anchor) {
+        var el = document.createElement(anchor.tagName);
+        el.className = anchor.className;
+        el.innerHTML = anchor.innerHTML;
+        Array.prototype.forEach.call(el.querySelectorAll('[id]'), function (n) { n.removeAttribute('id'); });
+        el.removeAttribute('href');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+
+        var svg = el.querySelector('svg');
+        if (svg) {
+            svg.removeAttribute('data-testid');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.innerHTML = '<path d="' + BELL_PATH + '"></path>';
+        }
+
+        finishIcon(el);
         el.addEventListener('keydown', function (evt) {
             if (evt.key === 'Enter' || evt.key === ' ') {
                 evt.preventDefault();
@@ -157,8 +167,20 @@
         return el;
     }
 
-    function ensureIcon() {
-        var anchor = document.querySelector('a[href="#/search"]');
+    // Layout legacy/TV: <button class="headerButton ... headerSearchButton"> con un
+    // <span class="material-icons search">, verificado en vivo (vm-titopc2, Modo de
+    // visualizacion = Escritorio Heredado). Ya es un <button> enfocable, sin necesidad de
+    // role/tabindex como en el moderno.
+    // Probado en vivo en el layout legacy/TV (vm-titopc2, Modo de visualizacion = Escritorio
+    // Heredado): el mismo anclaje a .headerSearchButton funciona, el icono se inserta bien...
+    // y a los pocos segundos desaparece solo, sin ningun error ni mutacion que lo justifique
+    // (comprobado con un MutationObserver propio sobre .headerRight). La barra legacy tiene su
+    // propia logica de ancho/overflow que no reconoce nuestro boton y lo retira. Sin un hueco
+    // mas fiable (Watchlist evita este mismo problema anclando a una pagina de ajustes, no a la
+    // barra persistente), se deja sin icono en legacy/TV en vez de parpadear: coherente con "si
+    // ninguna estrategia encaja, no se pinta nada".
+
+    function ensureIconAt(anchor, builder, strategy) {
         if (!anchor || !anchor.parentNode) {
             return false;
         }
@@ -168,15 +190,26 @@
             badge = icon.querySelector('.adminMessagesBadge');
             return true;
         }
-        // Cualquier icono huerfano en el mismo padre (React reordeno) se retira antes de reponer.
+        // Cualquier icono huerfano en el mismo padre (React reordeno, o el layout legacy
+        // reconstruyo la barra al hacerle hueco al nuestro) se retira antes de reponer.
         Array.prototype.forEach.call(anchor.parentNode.querySelectorAll(':scope > [data-adminmessages="icon"]'), function (n) {
             n.parentNode.removeChild(n);
         });
-        icon = buildIcon(anchor);
+        // La limpieza de arriba (o la reconstruccion que la provoco) puede haber desconectado el
+        // propio anchor de su padre: se reintenta en el siguiente tick contra uno fresco en vez
+        // de insertar sobre un nodo ya fuera del arbol.
+        if (!anchor.parentNode) {
+            return false;
+        }
+        icon = builder(anchor);
         anchor.parentNode.insertBefore(icon, anchor);
-        log('icon', 'modern-search-sibling');
+        log('icon', strategy);
         refresh();
         return true;
+    }
+
+    function ensureIcon() {
+        return ensureIconAt(document.querySelector('a[href="#/search"]'), buildIconModern, 'modern-search-sibling');
     }
 
     function buildPanel() {
