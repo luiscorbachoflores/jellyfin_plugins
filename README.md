@@ -1,6 +1,6 @@
 # Plugins de Jellyfin — luiscorbachoflores
 
-Cinco plugins independientes para Jellyfin (.NET 9 / `Jellyfin.Controller` 10.11.x; Language Badges y Search Notifier también compilan para Jellyfin 12.x / .NET 10; Recomendación Semanal solo para Jellyfin 12.2 / .NET 10). Los que llevan interfaz inyectan su propio script en `index.html` mediante un middleware ASP.NET Core en tiempo de respuesta — **sin modificar ningún fichero de jellyfin-web**.
+Seis plugins independientes para Jellyfin (.NET 9 / `Jellyfin.Controller` 10.11.x; Language Badges y Search Notifier también compilan para Jellyfin 12.x / .NET 10; Recomendación Semanal y AdminMessages solo para Jellyfin 12.2 / .NET 10). Los que llevan interfaz inyectan su propio script en `index.html` mediante un middleware ASP.NET Core en tiempo de respuesta — **sin modificar ningún fichero de jellyfin-web**.
 
 ## Instalación (repositorio de plugins)
 
@@ -10,7 +10,7 @@ En Jellyfin, ve a **Panel de control → Complementos → Repositorios** y añad
 https://github.com/luiscorbachoflores/jellyfin_plugins/raw/main/manifest.json
 ```
 
-Instala **Reviews**, **JellyAsk**, **Language Badges**, **Search Notifier** y/o **Recomendación Semanal** desde el catálogo de complementos y reinicia Jellyfin.
+Instala **Reviews**, **JellyAsk**, **Language Badges**, **Search Notifier**, **Recomendación Semanal** y/o **AdminMessages** desde el catálogo de complementos y reinicia Jellyfin.
 
 ## Reviews
 
@@ -70,16 +70,29 @@ Código en [`src/WeeklyPick`](src/WeeklyPick).
 
 ## Blog
 
-Blog de cine compartido, al estilo de los blogs clásicos de Blogspot: cualquier usuario con sesión lee y publica entradas (texto plano, etiquetas, títulos de la biblioteca mencionados, marca de spoilers) y comenta. Pantalla propia en `#/blog` con columna lateral (buscador, archivo por año y mes, etiquetas, colaboradores y comentarios recientes). El autor edita y borra lo suyo; un admin puede borrar (no editar) contenido ajeno.
+Blog de cine compartido, al estilo de los blogs clasicos de Blogspot: cualquier usuario con sesion lee y publica entradas (texto plano, etiquetas, titulos de la biblioteca mencionados, marca de spoilers) y comenta. Pantalla propia en #/blog con columna lateral (buscador, archivo por ano y mes, etiquetas, colaboradores y comentarios recientes). El autor edita y borra lo suyo; un admin puede borrar (no editar) contenido ajeno.
 
-- Para **Jellyfin 12.2** (.NET 10, `Jellyfin.Controller` 12.2.0). Store propio en SQLite (`<plugins>/Blog.Data/blog.db`).
-- La pantalla se pinta dentro de la ruta comodín de jellyfin-web (`#fallbackPage`), con su cabecera y tema; todo el texto de usuarios se inserta como texto, nunca como HTML.
-- Entrada «Blog» en el menú lateral de los dos layouts mediante `menuLinks` de `/web/config.json` (un middleware la añade sin tocar los enlaces del admin). Se puede desactivar en la configuración del plugin (`ShowInMenu`), junto con el título y la descripción del blog.
-- API (`/Blog`): `Info`, `Posts`, `Posts/{id}`, `Posts/{id}/Comments`, `Comments/{id}`, `Sidebar`; 401 sin sesión.
-- Diagnóstico: `localStorage['blog.debug'] = '1'`.
-- Tests: `dotnet test tests/Jellyfin.Plugin.Blog.Tests` y `node tests/blog-js/smoke.js` (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
+- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller 12.2.0). Store propio en SQLite (<plugins>/Blog.Data/blog.db).
+- La pantalla se pinta dentro de la ruta comodin de jellyfin-web (#fallbackPage), con su cabecera y tema; todo el texto de usuarios se inserta como texto, nunca como HTML.
+- Entrada Blog en el menu lateral de los dos layouts mediante menuLinks de /web/config.json (un middleware la anade sin tocar los enlaces del admin). Se puede desactivar en la configuracion del plugin (ShowInMenu), junto con el titulo y la descripcion del blog.
+- API (/Blog): Info, Posts, Posts/{id}, Posts/{id}/Comments, Comments/{id}, Sidebar; 401 sin sesion.
+- Diagnostico: localStorage['blog.debug'] = '1'.
+- Tests: dotnet test tests/Jellyfin.Plugin.Blog.Tests y node tests/blog-js/smoke.js (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
 
-Código en [`src/Blog`](src/Blog).
+Codigo en [`src/Blog`](src/Blog).
+
+## AdminMessages
+
+Bandeja de avisos persistentes del administrador: desde una pagina del panel ("Mensajes") se crean/editan/borran mensajes (titulo + cuerpo + link opcional) dirigidos a todos los usuarios o a una lista concreta. Cada usuario los ve en un desplegable anclado a un icono de campana en la barra superior, con contador de no leidos, boton "Abrir enlace" si el mensaje lleva uno, y puede marcarlos como leidos. Sin caducidad automatica, unidireccional (el usuario no responde) y sin aviso en vivo por WebSocket en esta v1 — ver SPECS.md (rama specs, seccion 0002) para el detalle y los defaults asumidos.
+
+El campo Link (spec 0003) absorbe el caso de uso "Announcements" (avisar de que el recap anual esta listo en una URL externa): en vez de un plugin aparte, es un mensaje broadcast con Link a esa URL.
+
+- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller/Jellyfin.Model 12.2.0, targetAbi 12.2.0.0) — confirmado en vivo contra la Pi y contra el POC (vm-titopc2).
+- API: POST/GET /AdminMessages y PUT/DELETE /AdminMessages/{id} (admin); GET /AdminMessages/mine y POST /AdminMessages/{id}/read (usuario autenticado). Persistencia SQLite propia.
+- El script cliente usa Authorization: MediaBrowser Token="...".
+- Validado en vivo (POC): instalacion, permisos 401/403, inyeccion del icono en la barra superior en layout moderno (no se pudo probar legacy/TV).
+
+Codigo en [`src/AdminMessages`](src/AdminMessages).
 
 ## Desarrollo
 
