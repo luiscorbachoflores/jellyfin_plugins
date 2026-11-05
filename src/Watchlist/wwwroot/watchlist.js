@@ -15,11 +15,14 @@
     var REMOVE_TEXT = 'Quitar de mi lista';
 
     var STYLE = [
-        '.watchlistOverlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;overflow-y:auto;color:inherit;font-family:inherit;padding:1.5em;box-sizing:border-box;}',
-        '.watchlistHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:1em;}',
-        '.watchlistHeader h2{margin:0;font-size:1.6em;font-weight:500;}',
+        '.watchlistOverlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:3vh 3vw;box-sizing:border-box;}',
+        '.watchlistPanel{width:70vw;height:70vh;max-width:1100px;max-height:820px;min-width:320px;min-height:320px;color:inherit;font-family:inherit;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden;}',
+        '@media (max-width:700px){.watchlistPanel{width:94vw;height:88vh;}}',
+        '.watchlistHeader{display:flex;align-items:center;justify-content:space-between;padding:1em 1.3em;border-bottom:1px solid rgba(128,128,128,.25);flex:0 0 auto;}',
+        '.watchlistHeader h2{margin:0;font-size:1.4em;font-weight:500;}',
         '.watchlistClose{background:transparent;border:none;color:inherit;font-size:1.6em;cursor:pointer;padding:.2em .5em;border-radius:4px;}',
         '.watchlistClose:focus,.watchlistCardOpen:focus,.watchlistCardRemove:focus{outline:2px solid #00a4dc;}',
+        '.watchlistBody{flex:1 1 auto;overflow-y:auto;padding:1.3em;}',
         '.watchlistGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1em;}',
         '.watchlistCard{position:relative;}',
         '.watchlistCardOpen{display:block;width:100%;text-align:left;background:transparent;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;}',
@@ -410,19 +413,26 @@
         overlay = document.createElement('div');
         overlay.className = 'watchlistOverlay';
         overlay.setAttribute('data-watchlist', 'view');
-        overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-modal', 'true');
-        overlay.setAttribute('aria-label', LABEL);
-        overlay.style.backgroundColor = bg;
-        overlay.innerHTML = '<div class="watchlistHeader"><h2>' + LABEL + '</h2>' +
+        overlay.addEventListener('mousedown', function (evt) {
+            if (evt.target === overlay) { closeView(); }
+        });
+
+        var panel = document.createElement('div');
+        panel.className = 'watchlistPanel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-label', LABEL);
+        panel.style.backgroundColor = bg;
+        panel.innerHTML = '<div class="watchlistHeader"><h2>' + LABEL + '</h2>' +
             '<button type="button" class="watchlistClose" aria-label="Cerrar" title="Cerrar">✕</button></div>' +
             '<div class="watchlistBody"><p class="watchlistEmpty">Cargando…</p></div>';
+        overlay.appendChild(panel);
         document.body.appendChild(overlay);
         document.addEventListener('keydown', onOverlayKey, true);
 
         var mine = overlay;
-        var body = overlay.querySelector('.watchlistBody');
-        var closeBtn = overlay.querySelector('.watchlistClose');
+        var body = panel.querySelector('.watchlistBody');
+        var closeBtn = panel.querySelector('.watchlistClose');
         closeBtn.addEventListener('click', closeView);
         closeBtn.focus();
 
