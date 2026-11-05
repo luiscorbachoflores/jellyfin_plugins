@@ -4,7 +4,9 @@ namespace Jellyfin.Plugin.Watchlist.Api;
 
 /// <summary>
 /// Decisión 401/permitir factorizada fuera del controlador (sin AuthorizationInfo/User de Jellyfin).
-/// No hay endpoints de admin: la watchlist es estrictamente personal.
+/// Cada usuario solo ve y modifica la suya por los endpoints normales; el único endpoint de
+/// admin (GET /Watchlist/Admin, solo lectura) comprueba el permiso directamente en el
+/// controlador, igual que AdminMessages/Blog.
 /// </summary>
 public static class WatchlistAccessPolicy
 {

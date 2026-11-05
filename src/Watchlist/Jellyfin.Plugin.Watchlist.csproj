@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="wwwroot\watchlist.js" />
+    <EmbeddedResource Include="Configuration\configPage.html" />
   </ItemGroup>
 
 </Project>

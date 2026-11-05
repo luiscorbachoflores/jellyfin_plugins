@@ -87,6 +87,26 @@ public class WatchlistRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void GetAll_ReturnsEntriesFromEveryUser()
+    {
+        _repository.Add("alice", "item-1");
+        _repository.Add("alice", "item-2");
+        _repository.Add("bob", "item-3");
+
+        var all = _repository.GetAll();
+
+        Assert.Equal(3, all.Count);
+        Assert.Equal(2, all.Count(e => e.UserId == "alice"));
+        Assert.Single(all, e => e.UserId == "bob" && e.ItemId == "item-3");
+    }
+
+    [Fact]
+    public void GetAll_EmptyWhenNothingAdded()
+    {
+        Assert.Empty(_repository.GetAll());
+    }
+
+    [Fact]
     public void GetForUser_OrdersByAddedUtcDescending()
     {
         _repository.Add("alice", "first");

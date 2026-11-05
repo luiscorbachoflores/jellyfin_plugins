@@ -134,6 +134,24 @@ public class WatchlistRepository
         return Convert.ToInt32(cmd.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Todas las entradas de todos los usuarios, para la vista de solo lectura del
+    /// administrador (agrupadas por usuario, más recientes primero dentro de cada uno).</summary>
+    public IReadOnlyList<WatchlistEntry> GetAll()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT UserId, ItemId, AddedUtc FROM WatchlistEntries ORDER BY UserId, AddedUtc DESC";
+        var result = new List<WatchlistEntry>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new WatchlistEntry(reader.GetString(0), reader.GetString(1), reader.GetString(2)));
+        }
+
+        return result;
+    }
+
     /// <summary>Entradas del usuario, más recientes primero.</summary>
     public IReadOnlyList<WatchlistEntry> GetForUser(string userId)
     {

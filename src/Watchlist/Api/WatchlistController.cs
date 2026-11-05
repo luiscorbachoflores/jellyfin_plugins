@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Jellyfin.Database.Implementations.Entities;
+using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.Watchlist.Db;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -19,17 +22,20 @@ public class WatchlistController : ControllerBase
 {
     private readonly WatchlistRepository _repository;
     private readonly ILibraryManager _libraryManager;
+    private readonly IUserManager _userManager;
     private readonly IAuthorizationContext _authorizationContext;
     private readonly ILogger<WatchlistController> _logger;
 
     public WatchlistController(
         WatchlistRepository repository,
         ILibraryManager libraryManager,
+        IUserManager userManager,
         IAuthorizationContext authorizationContext,
         ILogger<WatchlistController> logger)
     {
         _repository = repository;
         _libraryManager = libraryManager;
+        _userManager = userManager;
         _authorizationContext = authorizationContext;
         _logger = logger;
     }
@@ -98,6 +104,50 @@ public class WatchlistController : ControllerBase
         {
             _repository.RemoveMany(userId, missing);
         }
+
+        return Ok(result);
+    }
+
+    /// <summary>Vista de solo lectura para el administrador: la lista de cada usuario, agrupadas.
+    /// A diferencia de <see cref="GetAll"/>, no comprueba visibilidad de biblioteca (depende de
+    /// cada usuario, no del admin) ni hace autolimpieza de items borrados.</summary>
+    [HttpGet("Admin")]
+    public async Task<ActionResult<IReadOnlyList<AdminUserWatchlistDto>>> GetAllForAdmin()
+    {
+        var authInfo = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        var denied = WatchlistAccessPolicy.CheckAuthenticated(authInfo.IsAuthenticated, authInfo.IsApiKey, authInfo.User is not null);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        if (!IsAdmin(authInfo.User))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var result = _repository.GetAll()
+            .GroupBy(e => e.UserId)
+            .Select(group =>
+            {
+                var items = group.Select(entry =>
+                {
+                    var item = Guid.TryParse(entry.ItemId, out var itemGuid) ? _libraryManager.GetItemById(itemGuid) : null;
+                    return new AdminWatchlistItemDto(
+                        entry.ItemId,
+                        item?.Name ?? "Elemento eliminado",
+                        item?.GetBaseItemKind().ToString() ?? string.Empty,
+                        item?.ProductionYear,
+                        item is not null && item.HasImage(MediaBrowser.Model.Entities.ImageType.Primary, 0),
+                        entry.AddedUtc);
+                }).ToList();
+
+                var userName = Guid.TryParse(group.Key, out var userGuid) ? _userManager.GetUserById(userGuid)?.Username : null;
+                return new AdminUserWatchlistDto(group.Key, userName ?? "Usuario eliminado", items);
+            })
+            .OrderByDescending(u => u.Items.Count)
+            .ThenBy(u => u.UserName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
 
         return Ok(result);
     }
@@ -172,5 +222,12 @@ public class WatchlistController : ControllerBase
         }
 
         return WatchlistRules.IsEligible(true, item.GetBaseItemKind().ToString(), item.IsVisibleStandalone(authInfo.User));
+    }
+
+    // AuthorizationInfo.User (Jellyfin.Database.Implementations.Entities.User) no tiene HasPermission
+    // en esta ABI (ver nota en AdminMessages/Blog).
+    private static bool IsAdmin(User? user)
+    {
+        return user is not null && user.Permissions.Any(p => p.Kind == PermissionKind.IsAdministrator && p.Value);
     }
 }
