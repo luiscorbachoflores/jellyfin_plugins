@@ -16,7 +16,7 @@
     var BELL_PATH = 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z';
 
     var STYLE = [
-        '.adminMessagesBadge{position:absolute;top:8px;right:0;transform:translate(70%,0);min-width:15px;height:15px;border-radius:8px;background:#cc3333;color:#fff;font-size:10px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none;box-sizing:border-box;}',
+        '.adminMessagesBadge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);min-width:15px;height:15px;border-radius:8px;background:#cc3333;color:#fff;font-size:10px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none;box-sizing:border-box;}',
         '.adminMessagesBadge.hide{display:none;}',
         '.adminMessagesPanel{position:fixed;width:22em;max-width:85vw;max-height:60vh;overflow-y:auto;background:#1c1c1c;border-radius:8px;padding:1em;box-shadow:0 4px 24px rgba(0,0,0,.5);z-index:9001;}',
         '.adminMessagesPanel.hide{display:none;}',
