@@ -81,19 +81,29 @@ public class IndexInjectionMiddleware
             context.Response.Body = originalBody;
         }
 
-        var bytes = buffer.ToArray();
+        var originalBytes = buffer.ToArray();
+        var bytes = originalBytes;
         var contentType = context.Response.ContentType ?? string.Empty;
         if (context.Response.StatusCode == StatusCodes.Status200OK
             && contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
         {
-            var html = Encoding.UTF8.GetString(bytes);
-            var bodyClose = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
-            if (bodyClose >= 0 && !html.Contains(Marker, StringComparison.Ordinal))
+            try
             {
-                bytes = Encoding.UTF8.GetBytes(html.Insert(bodyClose, ScriptTag));
-                context.Response.Headers.Remove("ETag");
-                context.Response.Headers.CacheControl = "no-cache";
-                _logger.LogDebug("Language Badges script injected into {Path}", context.Request.Path);
+                var html = Encoding.UTF8.GetString(bytes);
+                var bodyClose = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
+                if (bodyClose >= 0 && !html.Contains(Marker, StringComparison.Ordinal))
+                {
+                    bytes = Encoding.UTF8.GetBytes(html.Insert(bodyClose, ScriptTag));
+                    context.Response.Headers.Remove("ETag");
+                    context.Response.Headers.CacheControl = "no-cache";
+                    _logger.LogDebug("Language Badges script injected into {Path}", context.Request.Path);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Un fallo aqui no debe romper la pagina para nadie: se sirve el HTML original sin inyectar.
+                bytes = originalBytes;
+                _logger.LogWarning(ex, "Language Badges: fallo al inyectar el script en {Path}", context.Request.Path);
             }
         }
 

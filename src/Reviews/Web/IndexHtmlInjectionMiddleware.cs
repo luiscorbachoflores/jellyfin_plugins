@@ -59,15 +59,26 @@ public class IndexHtmlInjectionMiddleware
             return;
         }
 
-        buffer.Seek(0, SeekOrigin.Begin);
-        var html = await new StreamReader(buffer, Encoding.UTF8).ReadToEndAsync().ConfigureAwait(false);
-
-        if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase) && !html.Contains("/Reviews/ClientScript", StringComparison.Ordinal))
+        var originalBytes = buffer.ToArray();
+        byte[] bytes;
+        try
         {
-            html = html.Replace("</body>", ScriptTag, StringComparison.OrdinalIgnoreCase);
+            buffer.Seek(0, SeekOrigin.Begin);
+            var html = await new StreamReader(buffer, Encoding.UTF8).ReadToEndAsync().ConfigureAwait(false);
+
+            if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase) && !html.Contains("/Reviews/ClientScript", StringComparison.Ordinal))
+            {
+                html = html.Replace("</body>", ScriptTag, StringComparison.OrdinalIgnoreCase);
+            }
+
+            bytes = Encoding.UTF8.GetBytes(html);
+        }
+        catch
+        {
+            // Un fallo aqui no debe romper la pagina para nadie: se sirve el HTML original sin inyectar.
+            bytes = originalBytes;
         }
 
-        var bytes = Encoding.UTF8.GetBytes(html);
         context.Response.ContentLength = bytes.Length;
         context.Response.Headers.Remove("Content-Encoding");
         await context.Response.Body.WriteAsync(bytes).ConfigureAwait(false);

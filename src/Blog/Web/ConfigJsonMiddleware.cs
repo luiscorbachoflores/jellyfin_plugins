@@ -64,15 +64,23 @@ public class ConfigJsonMiddleware
         var bytes = buffer.ToArray();
         if (context.Response.StatusCode == StatusCodes.Status200OK)
         {
-            var original = new UTF8Encoding(false).GetString(bytes).TrimStart('﻿');
-            var patched = ConfigJsonPatcher.Patch(original, true);
-            if (!ReferenceEquals(patched, original) && !string.Equals(patched, original, StringComparison.Ordinal))
+            try
             {
-                bytes = new UTF8Encoding(false).GetBytes(patched);
-                // El cuerpo cambió: que ni ETag ni Last-Modified del original validen una copia vieja.
-                context.Response.Headers.Remove("ETag");
-                context.Response.Headers.Remove("Last-Modified");
-                context.Response.Headers.CacheControl = "no-cache";
+                var original = new UTF8Encoding(false).GetString(bytes).TrimStart('﻿');
+                var patched = ConfigJsonPatcher.Patch(original, true);
+                if (!ReferenceEquals(patched, original) && !string.Equals(patched, original, StringComparison.Ordinal))
+                {
+                    bytes = new UTF8Encoding(false).GetBytes(patched);
+                    // El cuerpo cambió: que ni ETag ni Last-Modified del original validen una copia vieja.
+                    context.Response.Headers.Remove("ETag");
+                    context.Response.Headers.Remove("Last-Modified");
+                    context.Response.Headers.CacheControl = "no-cache";
+                }
+            }
+            catch
+            {
+                // Un fallo al parchear no debe romper /web/config.json para nadie.
+                bytes = buffer.ToArray();
             }
         }
 
