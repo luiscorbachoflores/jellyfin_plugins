@@ -224,5 +224,41 @@
                 "timestamp": "2026-10-12T00:00:00Z"
             }
         ]
+    },
+    {
+        "guid": "31e66f0b-a8e4-4e8a-be19-cf9d3678c691",
+        "name": "AdminMessages",
+        "description": "Permite al administrador dejar avisos persistentes a los usuarios, que estos ven en una bandeja la siguiente vez que entren.",
+        "overview": "Bandeja de avisos persistentes del administrador: icono de campana en la barra superior, panel con mensajes (titulo, cuerpo, enlace opcional), contador de no leidos y boton de marcar leido.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version: bandeja de avisos persistentes del administrador, icono de campana en la barra superior con contador de no leidos y boton de enlace opcional.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/adminmessages-v1.0.0.0/AdminMessages_12.2.0.zip",
+                "checksum": "9ce4610ea0a27f1dc3b22aa4166b07bf",
+                "timestamp": "2026-11-05T23:53:13Z"
+            }
+        ]
+    },
+    {
+        "guid": "351f939b-307a-44c6-a027-3b23fa1596a3",
+        "name": "Watchlist",
+        "description": "Lista personal «para ver» por usuario: entrada «Mi lista» en el menú del usuario y botón en el menú de tres puntos de cualquier carátula o ficha.",
+        "overview": "Lista personal para ver por usuario (distinta de Favoritos): se anade/quita desde el menu de tres puntos y se ve desde Mi lista en el menu del usuario, en un panel centrado que no ocupa toda la pantalla.",
+        "owner": "luiscorbachoflores",
+        "category": "General",
+        "versions": [
+            {
+                "version": "1.0.0.0",
+                "changelog": "Primera version: lista personal para ver por usuario via el menu de tres puntos y Mi lista en el menu de usuario, en un panel centrado al 70% de la pantalla.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/watchlist-v1.0.0.0/Watchlist_12.2.0.zip",
+                "checksum": "3d75b21db820f6e5bdb266e9c1b725d0",
+                "timestamp": "2026-11-05T23:53:13Z"
+            }
+        ]
     }
 ]
