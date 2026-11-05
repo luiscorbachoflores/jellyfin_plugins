@@ -4,13 +4,13 @@
     <title>Blog</title>
 </head>
 <body>
-    <div id="BlogConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+    <div id="BlogConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
         <div data-role="content">
             <div class="content-primary">
                 <form id="BlogConfigForm">
                     <div class="verticalSection">
                         <h2>Blog</h2>
-                        <p>Blog de cine compartido: cualquier usuario con sesión lee y publica en <code>#/blog</code>. Aquí ajustas el título, la descripción y si aparece en el menú lateral.</p>
+                        <p>Blog de cine compartido en <code>#/blog</code>. Aquí ajustas el título, la descripción, si aparece en el menú lateral y qué usuarios tienen acceso.</p>
                     </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="BlogTitle">Título del blog</label>
@@ -29,6 +29,11 @@
                         </label>
                         <div class="fieldDescription checkboxFieldDescription">Añade el enlace a <code>menuLinks</code> de <code>/web/config.json</code>, conservando los enlaces que ya tuvieras. Los clientes web lo recogen al recargar la página.</div>
                     </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="BlogAllowedUsers">Usuarios con acceso</label>
+                        <select is="emby-select" id="BlogAllowedUsers" multiple style="height:8em;"></select>
+                        <div class="fieldDescription">Sin seleccionar ninguno, el blog es visible para cualquier usuario con sesión (por defecto). Si seleccionas usuarios, solo ellos (y los administradores) podrán leerlo y publicar en él. Mantén pulsado Ctrl/Cmd para seleccionar varios.</div>
+                    </div>
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block">
                             <span>Guardar</span>
@@ -41,12 +46,27 @@
             (function () {
                 var pluginId = "1660e20b-ec3d-4424-91b0-4253e12de3c2";
 
+                function escapeHtml(str) {
+                    return String(str == null ? "" : str)
+                        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                }
+
                 document.querySelector("#BlogConfigPage").addEventListener("pageshow", function () {
                     Dashboard.showLoadingMsg();
-                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    var usersSelect = document.querySelector("#BlogAllowedUsers");
+                    Promise.all([ApiClient.getPluginConfiguration(pluginId), ApiClient.getUsers()]).then(function (results) {
+                        var config = results[0];
+                        var users = results[1] || [];
+                        usersSelect.innerHTML = users.map(function (u) {
+                            return "<option value=\"" + u.Id + "\">" + escapeHtml(u.Name) + "</option>";
+                        }).join("");
                         document.querySelector("#BlogTitle").value = config.Title || "";
                         document.querySelector("#BlogDescription").value = config.Description || "";
                         document.querySelector("#BlogShowInMenu").checked = config.ShowInMenu !== false;
+                        var allowed = config.AllowedUserIds || [];
+                        Array.prototype.forEach.call(usersSelect.options, function (o) {
+                            o.selected = allowed.indexOf(o.value) !== -1;
+                        });
                         Dashboard.hideLoadingMsg();
                     });
                 });
@@ -54,10 +74,12 @@
                 document.querySelector("#BlogConfigForm").addEventListener("submit", function (e) {
                     e.preventDefault();
                     Dashboard.showLoadingMsg();
+                    var usersSelect = document.querySelector("#BlogAllowedUsers");
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.Title = document.querySelector("#BlogTitle").value.trim();
                         config.Description = document.querySelector("#BlogDescription").value.trim();
                         config.ShowInMenu = document.querySelector("#BlogShowInMenu").checked;
+                        config.AllowedUserIds = Array.prototype.filter.call(usersSelect.options, function (o) { return o.selected; }).map(function (o) { return o.value; });
                         ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });

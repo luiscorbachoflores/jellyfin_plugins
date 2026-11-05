@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.Blog.Db;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +25,7 @@ public class BlogController : ControllerBase
     private readonly ILibraryManager _libraryManager;
     private readonly IUserManager _userManager;
     private readonly IAuthorizationContext _authorizationContext;
+    private readonly IApplicationPaths _appPaths;
     private readonly ILogger<BlogController> _logger;
 
     public BlogController(
@@ -30,12 +33,14 @@ public class BlogController : ControllerBase
         ILibraryManager libraryManager,
         IUserManager userManager,
         IAuthorizationContext authorizationContext,
+        IApplicationPaths appPaths,
         ILogger<BlogController> logger)
     {
         _repository = repository;
         _libraryManager = libraryManager;
         _userManager = userManager;
         _authorizationContext = authorizationContext;
+        _appPaths = appPaths;
         _logger = logger;
     }
 
@@ -227,7 +232,98 @@ public class BlogController : ControllerBase
         }
 
         _repository.DeletePost(id);
+        BlogImageStore.RemoveImage(_appPaths.PluginsPath, id);
         return NoContent();
+    }
+
+    [HttpPost("Posts/{id:guid}/Image")]
+    [RequestSizeLimit(BlogImageStore.MaxBytes)]
+    public async Task<IActionResult> UploadImage([FromRoute] Guid id, IFormFile? file)
+    {
+        var (auth, denied) = await Authenticate().ConfigureAwait(false);
+        if (denied is not null || auth is null)
+        {
+            return denied!;
+        }
+
+        var existing = _repository.GetPost(id);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var forbidden = BlogAccessPolicy.CheckEdit(auth.UserId.ToString("D"), existing.AuthorUserId);
+        if (forbidden is not null)
+        {
+            return forbidden;
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("No se ha recibido ninguna imagen.");
+        }
+
+        if (file.Length > BlogImageStore.MaxBytes)
+        {
+            return BadRequest("La imagen no puede superar 5 MB.");
+        }
+
+        var extension = BlogImageStore.ExtensionForContentType(file.ContentType);
+        if (extension is null)
+        {
+            return BadRequest("Formato de imagen no admitido (solo JPEG, PNG o WebP).");
+        }
+
+        using (var stream = file.OpenReadStream())
+        {
+            BlogImageStore.SaveImage(_appPaths.PluginsPath, id, extension, stream);
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("Posts/{id:guid}/Image")]
+    public async Task<IActionResult> DeleteImage([FromRoute] Guid id)
+    {
+        var (auth, denied) = await Authenticate().ConfigureAwait(false);
+        if (denied is not null || auth is null)
+        {
+            return denied!;
+        }
+
+        var existing = _repository.GetPost(id);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var forbidden = BlogAccessPolicy.CheckEdit(auth.UserId.ToString("D"), existing.AuthorUserId);
+        if (forbidden is not null)
+        {
+            return forbidden;
+        }
+
+        BlogImageStore.RemoveImage(_appPaths.PluginsPath, id);
+        return NoContent();
+    }
+
+    [HttpGet("Posts/{id:guid}/Image")]
+    public async Task<IActionResult> GetImage([FromRoute] Guid id)
+    {
+        var (auth, denied) = await Authenticate().ConfigureAwait(false);
+        if (denied is not null || auth is null)
+        {
+            return denied!;
+        }
+
+        var found = BlogImageStore.FindImage(_appPaths.PluginsPath, id);
+        if (found is null)
+        {
+            return NotFound();
+        }
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(found.Value.Path).ConfigureAwait(false);
+        return File(bytes, found.Value.ContentType);
     }
 
     [HttpPost("Posts/{id:guid}/Comments")]
@@ -359,6 +455,13 @@ public class BlogController : ControllerBase
     {
         var auth = await _authorizationContext.GetAuthorizationInfo(Request).ConfigureAwait(false);
         var denied = BlogAccessPolicy.CheckAuthenticated(auth.IsAuthenticated, auth.IsApiKey, auth.User is not null);
+        if (denied is not null)
+        {
+            return (null, denied);
+        }
+
+        var allowedUserIds = Plugin.Instance?.Configuration.AllowedUserIds ?? new List<string>();
+        denied = BlogAccessPolicy.CheckAccess(IsAdmin(auth.User), auth.UserId.ToString("D"), allowedUserIds);
         return denied is not null ? (null, denied) : (auth, null);
     }
 
@@ -438,7 +541,8 @@ public class BlogController : ControllerBase
             ResolveMentions(p.MentionItemIds, user),
             p.CommentCount,
             BlogAccessPolicy.CanEdit(viewer.UserId, p.AuthorUserId),
-            BlogAccessPolicy.CanDelete(viewer.UserId, p.AuthorUserId, viewer.IsAdmin));
+            BlogAccessPolicy.CanDelete(viewer.UserId, p.AuthorUserId, viewer.IsAdmin),
+            BlogImageStore.HasImage(_appPaths.PluginsPath, p.Id));
     }
 
     private PostDetailDto ToDetail(PostRecord p, Viewer viewer, NameCache names, User? user)
@@ -458,6 +562,7 @@ public class BlogController : ControllerBase
             comments.Count,
             BlogAccessPolicy.CanEdit(viewer.UserId, p.AuthorUserId),
             BlogAccessPolicy.CanDelete(viewer.UserId, p.AuthorUserId, viewer.IsAdmin),
+            BlogImageStore.HasImage(_appPaths.PluginsPath, p.Id),
             comments,
             newer is null ? null : new PostRefDto(newer.Id.ToString("D"), newer.Title),
             older is null ? null : new PostRefDto(older.Id.ToString("D"), older.Title));

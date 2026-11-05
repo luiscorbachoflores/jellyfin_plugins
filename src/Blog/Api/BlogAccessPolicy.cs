@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +20,27 @@ public static class BlogAccessPolicy
         }
 
         return null;
+    }
+
+    /// <summary>403 si hay una lista de usuarios con acceso al blog y el solicitante no está en
+    /// ella. Lista vacía = acceso abierto a cualquier usuario con sesión. Un admin siempre pasa,
+    /// esté o no en la lista, para que nunca se quede fuera por error de configuración.</summary>
+    public static ActionResult? CheckAccess(bool isAdmin, string? userId, IReadOnlyCollection<string> allowedUserIds)
+    {
+        if (isAdmin || allowedUserIds.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var allowed in allowedUserIds)
+        {
+            if (SameUser(userId, allowed))
+            {
+                return null;
+            }
+        }
+
+        return new ObjectResult("No tienes acceso a este blog.") { StatusCode = StatusCodes.Status403Forbidden };
     }
 
     /// <summary>Solo el autor edita (un admin no edita lo ajeno).</summary>

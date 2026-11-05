@@ -23,7 +23,8 @@ public record PostSummaryDto(
     IReadOnlyList<MentionDto> Mentions,
     int CommentCount,
     bool CanEdit,
-    bool CanDelete);
+    bool CanDelete,
+    bool HasImage);
 
 public record PostListDto(IReadOnlyList<PostSummaryDto> Posts, int Page, bool HasNewer, bool HasOlder);
 
@@ -44,6 +45,7 @@ public record PostDetailDto(
     int CommentCount,
     bool CanEdit,
     bool CanDelete,
+    bool HasImage,
     IReadOnlyList<CommentDto> Comments,
     PostRefDto? Newer,
     PostRefDto? Older);

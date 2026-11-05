@@ -17,14 +17,14 @@ public class DtoSerializationTests
             "2026-11-04T21:30:00.000Z", null,
             new[] { "terror" },
             new[] { new MentionDto("i1", "Alien", "Movie", 1979, true) },
-            3, true, false);
+            3, true, false, false);
         var root = Ser(new PostListDto(new[] { summary }, 2, true, false));
 
         Assert.Equal(2, root.GetProperty("Page").GetInt32());
         Assert.True(root.GetProperty("HasNewer").GetBoolean());
         Assert.False(root.GetProperty("HasOlder").GetBoolean());
         var p = root.GetProperty("Posts")[0];
-        foreach (var name in new[] { "Id", "Title", "Excerpt", "IsTruncated", "HasSpoilers", "Author", "CreatedUtc", "UpdatedUtc", "Labels", "Mentions", "CommentCount", "CanEdit", "CanDelete" })
+        foreach (var name in new[] { "Id", "Title", "Excerpt", "IsTruncated", "HasSpoilers", "Author", "CreatedUtc", "UpdatedUtc", "Labels", "Mentions", "CommentCount", "CanEdit", "CanDelete", "HasImage" })
         {
             Assert.True(p.TryGetProperty(name, out _), "falta " + name);
         }
@@ -46,13 +46,14 @@ public class DtoSerializationTests
         var detail = new PostDetailDto(
             "id1", "T", "cuerpo completo", false,
             new AuthorDto("u1", "luis"), "c", "u",
-            new[] { "a" }, System.Array.Empty<MentionDto>(), 1, true, true,
+            new[] { "a" }, System.Array.Empty<MentionDto>(), 1, true, true, false,
             new[] { new CommentDto("c1", new AuthorDto("u2", "ana"), "hola", "c", null, false, true) },
             new PostRefDto("n", "Nueva"), null);
         var root = Ser(detail);
 
         Assert.Equal("cuerpo completo", root.GetProperty("Body").GetString());
         Assert.False(root.TryGetProperty("Excerpt", out _));
+        Assert.True(root.TryGetProperty("HasImage", out _));
         var c = root.GetProperty("Comments")[0];
         foreach (var name in new[] { "Id", "Author", "Body", "CreatedUtc", "UpdatedUtc", "CanEdit", "CanDelete" })
         {

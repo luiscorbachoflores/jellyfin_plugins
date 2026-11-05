@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Jellyfin.Plugin.Blog.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -63,5 +64,27 @@ public class BlogAccessPolicyTests
         // El admin que no es autor puede borrar pero no editar.
         Assert.False(BlogAccessPolicy.CanEdit(Other, Author));
         Assert.True(BlogAccessPolicy.CanDelete(Other, Author, true));
+    }
+
+    [Fact]
+    public void Access_EmptyList_AllowsAnyone()
+    {
+        Assert.Null(BlogAccessPolicy.CheckAccess(false, Other, System.Array.Empty<string>()));
+    }
+
+    [Fact]
+    public void Access_NonEmptyList_AllowsOnlyListedUsers()
+    {
+        var allowed = new List<string> { Author };
+        Assert.Null(BlogAccessPolicy.CheckAccess(false, Author, allowed));
+        var forbidden = Assert.IsType<ObjectResult>(BlogAccessPolicy.CheckAccess(false, Other, allowed));
+        Assert.Equal(StatusCodes.Status403Forbidden, forbidden.StatusCode);
+    }
+
+    [Fact]
+    public void Access_AdminAlwaysAllowed_EvenIfNotListed()
+    {
+        var allowed = new List<string> { Author };
+        Assert.Null(BlogAccessPolicy.CheckAccess(true, Other, allowed));
     }
 }

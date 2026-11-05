@@ -61,6 +61,8 @@
         R + ' .blogMention a{display:block;}',
         R + ' .blogPoster{display:block;width:90px;height:135px;object-fit:cover;border-radius:4px;background:rgba(128,128,128,.25);}',
         R + ' .blogPosterBox{display:flex;align-items:center;justify-content:center;width:90px;height:135px;padding:.4em;border-radius:4px;background:rgba(128,128,128,.25);text-align:center;overflow:hidden;overflow-wrap:anywhere;color:' + C.text + ';}',
+        R + ' .blogPostImage{display:block;width:100%;max-height:420px;object-fit:cover;border-radius:4px;margin-bottom:.8em;background:rgba(128,128,128,.15);}',
+        R + ' .blogEditorImagePreview{display:block;max-width:220px;max-height:220px;object-fit:cover;border-radius:4px;margin-bottom:.5em;}',
         R + ' .blogMentionMore{display:block;margin-top:.3em;line-height:1.2;}',
         R + ' .blogMentionYear{display:block;color:' + C.muted + ';}',
         R + ' .blogPostFooter{margin-top:1em;padding-top:.6em;border-top:1px solid ' + C.divider + ';font-size:.85em;color:' + C.muted + ';}',
@@ -377,6 +379,19 @@
 
     function invalidateSidebar() { sidebarCache = null; }
 
+    // Si cambia el token (cambio de usuario en la misma pestaña, sin recargar la pagina) se
+    // limpia todo lo cacheado: si no, el sidebar o el titulo de un usuario podrian colarse en
+    // la sesion del siguiente.
+    var lastSeenToken;
+    function clearCachesOnUserChange() {
+        var t = token();
+        if (t === lastSeenToken) { return; }
+        lastSeenToken = t;
+        infoPromise = null;
+        infoCache = null;
+        sidebarCache = null;
+    }
+
     function injectStyle() {
         if (document.getElementById('blogStyle')) { return; }
         var s = document.createElement('style');
@@ -444,6 +459,39 @@
         return wrap;
     }
 
+    // La imagen de portada va protegida igual que el resto de la API (requiere el header
+    // Authorization), asi que no puede ir como src= directo: se pide con fetch y se vuelca a
+    // un object URL. Si falla (borrada, sin acceso...) se quita el <img> sin romper la pagina.
+    function imageUrl(postId) { return serverAddress() + '/Blog/Posts/' + encodeURIComponent(postId) + '/Image'; }
+
+    function loadImageInto(imgEl, postId) {
+        fetch(imageUrl(postId), { headers: authHeaders() }).then(function (r) {
+            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+            return r.blob();
+        }).then(function (blob) {
+            imgEl.src = URL.createObjectURL(blob);
+        }).catch(function () {
+            if (imgEl.parentNode) { imgEl.parentNode.removeChild(imgEl); }
+        });
+    }
+
+    function postImageEl(post) {
+        if (!post.HasImage) { return null; }
+        var img = el('img', { class: 'blogPostImage', alt: '' });
+        loadImageInto(img, post.Id);
+        return img;
+    }
+
+    function uploadImage(postId, file) {
+        return fetch(imageUrl(postId), { method: 'POST', headers: authHeaders(), body: (function () {
+            var fd = new FormData();
+            fd.append('file', file);
+            return fd;
+        }()) }).then(function (r) {
+            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+        });
+    }
+
     function mentionsRow(mentions) {
         if (!mentions || !mentions.length) { return null; }
         var row = el('div', { class: 'blogMentions' });
@@ -495,6 +543,7 @@
         article.appendChild(full
             ? el('h2', { class: 'blogPostTitle', text: post.Title })
             : el('h2', { class: 'blogPostTitle' }, el('a', { href: blogUrl({ post: post.Id }), text: post.Title })));
+        appendChildren(article, postImageEl(post));
         var bodyEl = el('div', { class: 'blogPostBody' }, linkify(full ? post.Body : post.Excerpt));
         article.appendChild(post.HasSpoilers ? spoilerWrap(bodyEl) : bodyEl);
         if (!full && post.IsTruncated) {
@@ -747,6 +796,19 @@
         var bodyInput = el('textarea', { class: 'blogTextarea', id: 'blogBodyInput', maxlength: 20000, rows: 14, value: post ? post.Body : '' });
         var labelsInput = el('input', { class: 'blogInput', type: 'text', id: 'blogLabelsInput', value: post ? (post.Labels || []).join(', ') : '' });
         var spoilersInput = el('input', { type: 'checkbox', id: 'blogSpoilersInput', checked: post ? post.HasSpoilers : false });
+        var imageInput = el('input', { type: 'file', id: 'blogImageInput', accept: 'image/jpeg,image/png,image/webp' });
+        var removeImageInput = post && post.HasImage ? el('input', { type: 'checkbox', id: 'blogRemoveImageInput' }) : null;
+        var imagePreview = post && post.HasImage ? el('img', { class: 'blogEditorImagePreview', alt: '' }) : null;
+        if (imagePreview) { loadImageInto(imagePreview, post.Id); }
+        imageInput.addEventListener('change', function () {
+            var f = imageInput.files && imageInput.files[0];
+            if (f && f.size > 5 * 1024 * 1024) {
+                errorBox.textContent = 'La imagen no puede superar 5 MB.';
+                imageInput.value = '';
+            } else {
+                errorBox.textContent = '';
+            }
+        });
         var searchInput = el('input', { class: 'blogInput', type: 'search', id: 'blogMentionSearch', autocomplete: 'off', placeholder: 'Buscar película o serie…' });
         var chips = el('div', { class: 'blogChips' });
         var hits = el('div', { class: 'blogHits' });
@@ -818,6 +880,12 @@
             el('div', { class: 'blogField' }, [el('label', { for: 'blogLabelsInput', text: 'Etiquetas (separadas por comas, máximo 5)' }), labelsInput]),
             el('div', { class: 'blogField' }, el('label', { class: 'blogCheck', for: 'blogSpoilersInput' }, [spoilersInput, 'Contiene spoilers'])),
             el('div', { class: 'blogField' }, [
+                el('label', { for: 'blogImageInput', text: 'Imagen (opcional, JPG/PNG/WebP, máx. 5 MB)' }),
+                imagePreview,
+                imageInput,
+                removeImageInput ? el('label', { class: 'blogCheck' }, [removeImageInput, 'Quitar la imagen actual']) : null
+            ]),
+            el('div', { class: 'blogField' }, [
                 el('label', { for: 'blogMentionSearch', text: 'Títulos mencionados (máximo ' + MAX_MENTIONS + ')' }),
                 searchInput, hits, chips, hint
             ]),
@@ -843,8 +911,19 @@
                 ? request('PUT', '/Blog/Posts/' + encodeURIComponent(post.Id), payload)
                 : request('POST', '/Blog/Posts', payload);
             req.then(function (saved) {
-                invalidateSidebar();
-                window.location.hash = blogUrl({ post: saved && saved.Id ? saved.Id : (post && post.Id) });
+                var id = saved && saved.Id ? saved.Id : (post && post.Id);
+                var file = imageInput.files && imageInput.files[0];
+                var imageOp = file
+                    ? uploadImage(id, file)
+                    : (removeImageInput && removeImageInput.checked ? request('DELETE', '/Blog/Posts/' + encodeURIComponent(id) + '/Image') : Promise.resolve());
+                // El texto ya se guardó; si falla solo la imagen no bloqueamos la navegación.
+                imageOp.then(function () {
+                    invalidateSidebar();
+                    window.location.hash = blogUrl({ post: id });
+                }, function () {
+                    invalidateSidebar();
+                    window.location.hash = blogUrl({ post: id });
+                });
             }, function (err) {
                 submit.disabled = false;
                 errorBox.textContent = errorMessage(err, 'No se pudo guardar la entrada.');
@@ -1023,6 +1102,7 @@
 
     function run() {
         scheduled = false;
+        clearCachesOnUserChange();
         syncRouteClass();
         if (!isBlogRoute()) {
             // Fuera de /blog no se toca nada; React desmonta #fallbackPage y el blog desaparece con ella.
