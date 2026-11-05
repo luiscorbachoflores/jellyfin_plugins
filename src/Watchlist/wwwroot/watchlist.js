@@ -28,6 +28,7 @@
         '.watchlistCardYear{display:block;font-size:.8em;opacity:.7;}',
         '.watchlistCardRemove{position:absolute;top:.3em;right:.3em;width:2em;height:2em;border-radius:50%;border:none;background:rgba(0,0,0,.7);color:#fff;cursor:pointer;}',
         '.watchlistEmpty{opacity:.8;}',
+        '.watchlistEmptyIcon{font-size:1.1em;vertical-align:text-bottom;}',
         '.watchlistToast{position:fixed;left:50%;bottom:2em;transform:translateX(-50%);background:#333;color:#fff;padding:.7em 1.2em;border-radius:6px;z-index:10001;max-width:90vw;}'
     ].join('');
 
@@ -240,7 +241,7 @@
         return false;
     }
 
-    // ---------------------------------------------------------------- detail button
+    // ---------------------------------------------------------------- estado compartido
 
     var statusCache = {};
     var statusPending = {};
@@ -250,38 +251,6 @@
         if (!/^#!?\/details(\?|$)/i.test(h)) { return null; }
         var m = /[?&]id=([0-9a-fA-F-]{32,36})/.exec(h);
         return m ? normId(m[1]) : null;
-    }
-
-    function visibleDetailContainer() {
-        var list = document.querySelectorAll('.itemDetailPage .mainDetailButtons');
-        for (var i = 0; i < list.length; i++) {
-            if (!list[i].closest('.itemDetailPage.hide, .hide')) { return list[i]; }
-        }
-        return null;
-    }
-
-    function applyButtonState(btn, inList) {
-        var text = inList ? REMOVE_TEXT : ADD_TEXT;
-        setAttr(btn, 'title', text);
-        setAttr(btn, 'aria-label', text);
-        setAttr(btn, 'aria-pressed', inList ? 'true' : 'false');
-        var icon = btn.querySelector('.detailButton-icon');
-        if (icon) { setClass(icon, 'material-icons detailButton-icon ' + (inList ? 'bookmark' : 'bookmark_border')); }
-    }
-
-    function buildDetailButton(id) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'button-flat detailButton';
-        btn.setAttribute('data-watchlist', 'detail');
-        btn.setAttribute('data-item-id', id);
-        btn.innerHTML = '<div class="detailButton-content"><span class="material-icons detailButton-icon bookmark_border" aria-hidden="true"></span></div>';
-        btn.addEventListener('click', function (evt) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            toggle(btn.getAttribute('data-item-id'));
-        });
-        return btn;
     }
 
     function toggle(id) {
@@ -301,16 +270,31 @@
         });
     }
 
-    function removeDetailButtons(container) {
-        Array.prototype.forEach.call(container.querySelectorAll('[data-watchlist="detail"]'), function (n) {
-            n.parentNode.removeChild(n);
-        });
+    // ---------------------------------------------------------------- actionsheet item (tres puntos)
+
+    // Capturado en captura (antes de que el propio actionsheet.js abra el menu), para saber a
+    // que item pertenece el "Mas" que se acaba de pulsar: tarjeta de rejilla o la ficha misma.
+    var pendingActionSheetItem = null;
+
+    function captureActionSheetContext(evt) {
+        // El boton "Mas" usa clases distintas en la rejilla (.itemAction, carta) y en la ficha
+        // (.btnMoreCommands): se detecta por el icono more_vert, comun a los dos sitios.
+        var btn = evt.target && evt.target.closest ? evt.target.closest('button, a') : null;
+        if (!btn || !btn.querySelector('.more_vert')) { return; }
+        var card = btn.closest('.card[data-id]');
+        if (card) {
+            pendingActionSheetItem = normId(card.getAttribute('data-id'));
+            return;
+        }
+        var id = currentDetailId();
+        pendingActionSheetItem = id || null;
     }
 
-    function injectDetailButton() {
-        var id = currentDetailId();
-        var container = id ? visibleDetailContainer() : null;
-        if (!id || !container) { return false; }
+    function injectActionSheetItem() {
+        var scroller = document.querySelector('.actionSheet.opened .actionSheetScroller');
+        if (!scroller || scroller.querySelector('[data-watchlist="actionsheet"]')) { return false; }
+        var id = pendingActionSheetItem;
+        if (!id) { return false; }
 
         var st = statusCache[id];
         if (!st) {
@@ -325,29 +309,33 @@
                     scheduleRun();
                 });
             }
-            return true;
+            return true; // el menu sigue abierto; se reintenta en cuanto resuelva el estado
         }
+        if (!st.eligible) { return true; }
 
-        var existing = container.querySelector('[data-watchlist="detail"]');
-        if (!st.eligible) {
-            if (existing) { removeDetailButtons(container); }
-            return true;
-        }
-        if (existing && existing.getAttribute('data-item-id') !== id) {
-            removeDetailButtons(container);
-            existing = null;
-        }
-        if (!existing) {
-            existing = buildDetailButton(id);
-            var fav = container.querySelector('.btnUserRating');
-            if (fav && fav.parentNode) {
-                fav.parentNode.insertBefore(existing, fav.nextSibling);
-            } else {
-                container.appendChild(existing);
-            }
-            log('detail', fav ? 'after-btnUserRating' : 'append-mainDetailButtons');
-        }
-        applyButtonState(existing, st.inList);
+        var sample = scroller.querySelector('.actionSheetMenuItem');
+        if (!sample) { return true; }
+
+        var item = document.createElement(sample.tagName);
+        item.className = sample.className;
+        if (sample.hasAttribute('is')) { item.setAttribute('is', sample.getAttribute('is')); }
+        if (sample.hasAttribute('type')) { item.setAttribute('type', sample.getAttribute('type')); }
+        item.setAttribute('data-watchlist', 'actionsheet');
+        item.setAttribute('data-item-id', id);
+
+        var inList = st.inList;
+        var iconClass = 'actionsheetMenuItemIcon listItemIcon listItemIcon-transparent material-icons ' +
+            (inList ? 'bookmark' : 'bookmark_border');
+        item.innerHTML = '<span class="' + iconClass + '" aria-hidden="true"></span>' +
+            '<div class="listItemBody actionsheetListItemBody"><div class="listItemBodyText actionSheetItemText">' +
+            escapeHtml(inList ? REMOVE_TEXT : ADD_TEXT) + '</div></div>';
+
+        // No stopPropagation: el propio actionsheet.js cierra el menu al pulsar cualquier item
+        // nativo (verificado en vivo), y un data-id que no reconoce su propio switch no hace nada.
+        item.addEventListener('click', function () { toggle(id); });
+
+        scroller.appendChild(item);
+        log('actionsheet', 'appended');
         return true;
     }
 
@@ -390,7 +378,9 @@
 
     function renderList(body, items) {
         if (!items.length) {
-            body.innerHTML = '<p class="watchlistEmpty">Tu lista está vacía. Añade títulos desde su ficha.</p>';
+            body.innerHTML = '<p class="watchlistEmpty">Tu lista está vacía. Para añadir una película o serie, abre su menú' +
+                ' <span class="material-icons watchlistEmptyIcon" aria-hidden="true">more_vert</span>' +
+                ' (en su carátula o en su ficha) y elige «' + ADD_TEXT + '».</p>';
             return;
         }
         var html = '<div class="watchlistGrid">';
@@ -478,7 +468,7 @@
         if (!isLoggedIn()) { return; }
         safe('menu-modern', injectMenuModern);
         safe('menu-legacy', injectMenuLegacy);
-        safe('detail', injectDetailButton);
+        safe('actionsheet', injectActionSheetItem);
         if (pendingOpen) {
             pendingOpen = false;
             safe('open', function () { openView(document.activeElement); });
@@ -495,6 +485,7 @@
         safe('style', injectStyle);
         var observer = new MutationObserver(scheduleRun);
         observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        document.addEventListener('click', captureActionSheetContext, true);
         window.addEventListener('hashchange', function () {
             closeView();
             if (/[?&]watchlist=open\b/.test(window.location.hash || '')) { pendingOpen = true; }
