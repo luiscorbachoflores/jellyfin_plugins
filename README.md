@@ -94,6 +94,19 @@ El campo Link (spec 0003) absorbe el caso de uso "Announcements" (avisar de que 
 
 Codigo en [`src/AdminMessages`](src/AdminMessages).
 
+## Watchlist (Mi lista)
+
+Lista personal "para ver" por usuario (distinta de Favoritos). Se anade/quita desde el menu de tres puntos de cualquier caratula o ficha (icono more_vert, cubre rejilla y detalle con el mismo selector), y "Mi lista" en el menu del usuario (junto a Perfil/Ajustes) abre la lista. Solo cliente web.
+
+- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller 12.2.0). Store propio en SQLite (<plugins>/Watchlist.Data/watchlist.db), maximo 500 titulos por usuario; cada usuario solo ve y modifica la suya (ni un admin ve la de otros).
+- API: GET /Watchlist, GET|POST|DELETE /Watchlist/Items/{itemId}; 401 sin sesion, 404 si el usuario no puede ver el item, 400 si no es pelicula/serie o se supera el limite.
+- La vista "Mi lista" es un panel centrado al 70% de la pantalla (94vw/88vh en movil), con fondo atenuado y tres formas de cerrar: boton X, Escape o click fuera del panel. Probado con 28 titulos sin desbordar ni romper el grid.
+- **Acceso de emergencia:** si una version futura de jellyfin-web rompe los anclajes de menu, abre #/home?watchlist=open (parametro watchlist=open en el hash) y la lista se abre al cargar.
+- Diagnostico: localStorage['watchlist.debug'] = '1' muestra en consola que estrategia de anclaje encajo ([Watchlist] menu: modern-app-user-menu).
+- Tests: dotnet test tests/Jellyfin.Plugin.Watchlist.Tests y node tests/watchlist-js/smoke.js (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
+
+Codigo en [`src/Watchlist`](src/Watchlist).
+
 ## Desarrollo
 
 Cada plugin es un proyecto .NET independiente:

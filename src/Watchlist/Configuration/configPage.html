@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Watchlist</title>
+</head>
+<body>
+    <div id="WatchlistConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-button">
+        <div data-role="content">
+            <div class="content-primary">
+                <div class="verticalSection">
+                    <h2>Watchlist</h2>
+                    <p>Vista de solo lectura de lo que cada usuario tiene en su lista personal «para ver». Nadie más que el usuario puede añadir o quitar títulos de la suya: esto es solo para que el administrador vea de un vistazo quién tiene qué pendiente.</p>
+                    <button is="emby-button" type="button" class="raised" id="WatchlistRefreshBtn">
+                        <span>Actualizar</span>
+                    </button>
+                </div>
+                <div class="verticalSection">
+                    <table id="WatchlistAdminTable" style="width:100%;border-collapse:collapse;text-align:left">
+                        <thead>
+                            <tr>
+                                <th style="padding:.4em">Usuario</th>
+                                <th style="padding:.4em">Título</th>
+                                <th style="padding:.4em">Tipo</th>
+                                <th style="padding:.4em">Año</th>
+                                <th style="padding:.4em">Añadido</th>
+                            </tr>
+                        </thead>
+                        <tbody id="WatchlistAdminBody"><tr><td colspan="5" style="padding:.4em;opacity:.7">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                function escapeHtml(str) {
+                    return String(str == null ? "" : str)
+                        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                }
+
+                function typeLabel(t) {
+                    return t === "Movie" ? "Película" : (t === "Series" ? "Serie" : (t || ""));
+                }
+
+                function dateText(s) {
+                    var d = new Date(s);
+                    return isNaN(d.getTime()) ? "" : d.toLocaleString();
+                }
+
+                function authHeaders() {
+                    var headers = {};
+                    var token = ApiClient && typeof ApiClient.accessToken === "function" ? ApiClient.accessToken() : null;
+                    if (token) {
+                        headers["Authorization"] = "MediaBrowser Token=\"" + token + "\"";
+                    }
+                    return headers;
+                }
+
+                function load() {
+                    var body = document.querySelector("#WatchlistAdminBody");
+                    body.innerHTML = "<tr><td colspan=\"5\" style=\"padding:.4em;opacity:.7\">Cargando...</td></tr>";
+                    fetch(ApiClient.serverAddress() + "/Watchlist/Admin", { headers: authHeaders() }).then(function (r) {
+                        if (!r.ok) { throw new Error("HTTP " + r.status); }
+                        return r.json();
+                    }).then(function (users) {
+                        var rows = [];
+                        (users || []).forEach(function (u) {
+                            if (!u.Items || u.Items.length === 0) {
+                                rows.push("<tr style=\"border-top:1px solid rgba(128,128,128,.25)\">" +
+                                    "<td style=\"padding:.5em .4em;font-weight:600;\">" + escapeHtml(u.UserName) + "</td>" +
+                                    "<td style=\"padding:.5em .4em;opacity:.7;\" colspan=\"4\">Lista vacía.</td></tr>");
+                                return;
+                            }
+
+                            u.Items.forEach(function (it, i) {
+                                rows.push("<tr style=\"border-top:1px solid rgba(128,128,128,.25)\">" +
+                                    "<td style=\"padding:.5em .4em;font-weight:600;\">" + (i === 0 ? escapeHtml(u.UserName) : "") + "</td>" +
+                                    "<td style=\"padding:.5em .4em;\">" + escapeHtml(it.Name) + "</td>" +
+                                    "<td style=\"padding:.5em .4em;\">" + escapeHtml(typeLabel(it.Type)) + "</td>" +
+                                    "<td style=\"padding:.5em .4em;\">" + (it.ProductionYear || "") + "</td>" +
+                                    "<td style=\"padding:.5em .4em;white-space:nowrap;\">" + dateText(it.AddedUtc) + "</td></tr>");
+                            });
+                        });
+                        body.innerHTML = rows.length ? rows.join("") : "<tr><td colspan=\"5\" style=\"padding:.4em;opacity:.7\">Nadie tiene nada en su lista todavía.</td></tr>";
+                    }).catch(function (err) {
+                        body.innerHTML = "<tr><td colspan=\"5\" style=\"padding:.4em;opacity:.7\">No se pudo cargar (" + escapeHtml(err.message) + ").</td></tr>";
+                    });
+                }
+
+                document.querySelector("#WatchlistConfigPage").addEventListener("pageshow", load);
+                document.querySelector("#WatchlistRefreshBtn").addEventListener("click", load);
+            })();
+        </script>
+    </div>
+</body>
+</html>
