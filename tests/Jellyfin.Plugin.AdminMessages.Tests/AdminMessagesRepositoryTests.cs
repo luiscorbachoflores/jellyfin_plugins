@@ -260,4 +260,94 @@ public class AdminMessagesRepositoryTests : IDisposable
             }
         }
     }
+
+    private const string UserNoDashes = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+    private const string UserDashed = "a1b2c3d4-e5f6-0718-293a-4b5c6d7e8f90";
+
+    [Fact]
+    public void GetForUser_TargetStoredWithoutDashes_MatchesDashedJellyfinId()
+    {
+        _repository.Add("admin-1", "Hola", "Cuerpo", null, new[] { UserNoDashes });
+
+        var forUser = _repository.GetForUser(UserDashed);
+
+        Assert.Single(forUser);
+    }
+
+    [Fact]
+    public void GetForUser_TargetStoredWithDashes_MatchesNoDashesId_AndIgnoresCase()
+    {
+        _repository.Add("admin-1", "Hola", "Cuerpo", null, new[] { UserDashed.ToUpperInvariant() });
+
+        Assert.Single(_repository.GetForUser(UserNoDashes));
+        Assert.Single(_repository.GetForUser(UserDashed));
+    }
+
+    [Fact]
+    public void GetForUser_TargetedMessage_DoesNotAppearForOtherUser()
+    {
+        _repository.Add("admin-1", "Hola", "Cuerpo", null, new[] { UserNoDashes });
+
+        Assert.Empty(_repository.GetForUser("0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0"));
+    }
+
+    [Fact]
+    public void MarkRead_WithDashedId_IsReflectedWhenQueryingWithEitherFormat()
+    {
+        var record = _repository.Add("admin-1", "Hola", "Cuerpo", null, new[] { UserNoDashes });
+
+        Assert.True(_repository.AppliesToUser(record.Id, UserDashed));
+        _repository.MarkRead(record.Id, UserDashed);
+
+        Assert.True(_repository.GetForUser(UserNoDashes).Single().IsRead);
+        Assert.True(_repository.GetForUser(UserDashed).Single().IsRead);
+    }
+
+    [Fact]
+    public void Initialize_MigratesLegacyUserIdsInTargetsAndReads()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"adminmessages-legacy-{Guid.NewGuid()}.db");
+        try
+        {
+            var first = new AdminMessagesRepository(path);
+            var record = first.Add("admin-1", "Hola", "Cuerpo", null, new[] { UserNoDashes });
+
+            // Simula una base antigua: target con guiones y mayusculas, y una lectura
+            // duplicada (una con guiones y otra ya normalizada).
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            using (var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path}"))
+            {
+                conn.Open();
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = "UPDATE MessageTargets SET UserId = $u";
+                cmd.Parameters.AddWithValue("$u", UserDashed.ToUpperInvariant());
+                cmd.ExecuteNonQuery();
+
+                var reads = conn.CreateCommand();
+                reads.CommandText = "INSERT INTO MessageReads (MessageId, UserId, ReadUtc) VALUES ($m, $u, 'x'), ($m, $n, 'x')";
+                reads.Parameters.AddWithValue("$m", record.Id.ToString());
+                reads.Parameters.AddWithValue("$u", UserDashed);
+                reads.Parameters.AddWithValue("$n", UserNoDashes);
+                reads.ExecuteNonQuery();
+            }
+
+            var reopened = new AdminMessagesRepository(path);
+
+            var mine = reopened.GetForUser(UserDashed);
+            Assert.Single(mine);
+            Assert.True(mine.Single().IsRead);
+            Assert.Equal(new[] { UserNoDashes }, reopened.GetById(record.Id)!.TargetUserIds);
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            try { File.Delete(path); } catch (IOException) { }
+        }
+    }
+
+    [Fact]
+    public void NormalizeUserId_NonGuid_IsLeftUntouchedExceptTrim()
+    {
+        Assert.Equal("alice", AdminMessagesRepository.NormalizeUserId(" alice "));
+    }
 }

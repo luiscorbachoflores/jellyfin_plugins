@@ -46,6 +46,58 @@ public class AdminMessagesRepository
         cmd.ExecuteNonQuery();
 
         EnsureLinkColumn(connection);
+        NormalizeStoredUserIds(connection);
+    }
+
+    // Forma canonica del id de usuario: GUID sin guiones y en minusculas ("N"). El panel
+    // de administracion envia los ids asi, pero Jellyfin entrega AuthorizationInfo.UserId
+    // como Guid y su ToString() lleva guiones; comparar ambas cadenas en SQLite (igualdad
+    // exacta) dejaba vacia la bandeja de cualquier usuario con mensajes dirigidos.
+    // Lo que no es un GUID se deja tal cual (solo recortado).
+    public static string NormalizeUserId(string userId)
+    {
+        var trimmed = userId.Trim();
+        return Guid.TryParse(trimmed, out var guid) ? guid.ToString("N") : trimmed;
+    }
+
+    // Migracion: bases creadas antes de normalizar pueden tener ids con guiones o en
+    // mayusculas en MessageTargets/MessageReads. UPDATE OR IGNORE evita romper la clave
+    // primaria si ya existiera la fila normalizada; la duplicada sobrante se borra.
+    private static void NormalizeStoredUserIds(SqliteConnection connection)
+    {
+        foreach (var table in new[] { "MessageTargets", "MessageReads" })
+        {
+            var select = connection.CreateCommand();
+            select.CommandText = $"SELECT DISTINCT UserId FROM {table}";
+            var stored = new List<string>();
+            using (var reader = select.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    stored.Add(reader.GetString(0));
+                }
+            }
+
+            foreach (var userId in stored)
+            {
+                var normalized = NormalizeUserId(userId);
+                if (normalized == userId)
+                {
+                    continue;
+                }
+
+                var update = connection.CreateCommand();
+                update.CommandText = $"UPDATE OR IGNORE {table} SET UserId = $new WHERE UserId = $old";
+                update.Parameters.AddWithValue("$new", normalized);
+                update.Parameters.AddWithValue("$old", userId);
+                update.ExecuteNonQuery();
+
+                var cleanup = connection.CreateCommand();
+                cleanup.CommandText = $"DELETE FROM {table} WHERE UserId = $old";
+                cleanup.Parameters.AddWithValue("$old", userId);
+                cleanup.ExecuteNonQuery();
+            }
+        }
     }
 
     // Migración simple: Link se añadió después de la primera versión de este plugin
@@ -211,7 +263,7 @@ public class AdminMessagesRepository
             WHERE NOT EXISTS (SELECT 1 FROM MessageTargets t WHERE t.MessageId = m.Id)
                OR EXISTS (SELECT 1 FROM MessageTargets t WHERE t.MessageId = m.Id AND t.UserId = $userId)
             ORDER BY datetime(m.CreatedUtc) DESC";
-        cmd.Parameters.AddWithValue("$userId", userId);
+        cmd.Parameters.AddWithValue("$userId", NormalizeUserId(userId));
 
         var results = new List<UserMessageRecord>();
         using var reader = cmd.ExecuteReader();
@@ -243,7 +295,7 @@ public class AdminMessagesRepository
               )
             LIMIT 1";
         cmd.Parameters.AddWithValue("$id", messageId.ToString());
-        cmd.Parameters.AddWithValue("$userId", userId);
+        cmd.Parameters.AddWithValue("$userId", NormalizeUserId(userId));
 
         using var reader = cmd.ExecuteReader();
         return reader.Read();
@@ -256,14 +308,14 @@ public class AdminMessagesRepository
         var cmd = connection.CreateCommand();
         cmd.CommandText = "INSERT OR IGNORE INTO MessageReads (MessageId, UserId, ReadUtc) VALUES ($messageId, $userId, $readUtc)";
         cmd.Parameters.AddWithValue("$messageId", messageId.ToString());
-        cmd.Parameters.AddWithValue("$userId", userId);
+        cmd.Parameters.AddWithValue("$userId", NormalizeUserId(userId));
         cmd.Parameters.AddWithValue("$readUtc", DateTime.UtcNow.ToString("o"));
         cmd.ExecuteNonQuery();
     }
 
     private static void InsertTargets(SqliteConnection connection, SqliteTransaction transaction, Guid messageId, IReadOnlyList<string> targetUserIds)
     {
-        foreach (var userId in targetUserIds.Distinct())
+        foreach (var userId in targetUserIds.Select(NormalizeUserId).Distinct())
         {
             var insertTarget = connection.CreateCommand();
             insertTarget.Transaction = transaction;

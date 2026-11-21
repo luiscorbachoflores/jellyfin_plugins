@@ -234,6 +234,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.0.1.0",
+                "changelog": "Corrige que los mensajes dirigidos a usuarios concretos no aparecian en su bandeja: los ids de usuario se normalizan (con o sin guiones) al guardar y al consultar, y las bases existentes se migran solas al cargar.",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/adminmessages-v1.0.1.0/AdminMessages_12.2.0.zip",
+                "checksum": "87832cc78adc19e1fcc05c9b6df77ef0",
+                "timestamp": "2026-11-21T18:23:14Z"
+            },
+            {
                 "version": "1.0.0.0",
                 "changelog": "Primera version: bandeja de avisos persistentes del administrador, icono de campana en la barra superior con contador de no leidos y boton de enlace opcional.",
                 "targetAbi": "12.2.0.0",
