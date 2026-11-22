@@ -17,7 +17,7 @@
     TODO: confirmar targetAbi contra producción.
     Blog (spec 0001) fija Jellyfin.Controller/Jellyfin.Model a 12.2.0 igual que AdminMessages y
     Watchlist: es el ABI que manifest.json da por promovido a producción para Reviews / JellyAsk
-    (y el que usa WeeklyPick), pero nadie lo ha confirmado en vivo contra la Pi. Revisar
+    (y el que usa WeeklyPick), pero nadie lo ha confirmado en vivo contra el servidor real. Revisar
     config/plugins en el servidor real antes de cualquier release.
   -->
   <ItemGroup>

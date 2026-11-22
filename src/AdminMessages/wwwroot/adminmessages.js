@@ -168,10 +168,10 @@
     }
 
     // Layout legacy/TV: <button class="headerButton ... headerSearchButton"> con un
-    // <span class="material-icons search">, verificado en vivo (vm-titopc2, Modo de
+    // <span class="material-icons search">, verificado en vivo (Modo de
     // visualizacion = Escritorio Heredado). Ya es un <button> enfocable, sin necesidad de
     // role/tabindex como en el moderno.
-    // Probado en vivo en el layout legacy/TV (vm-titopc2, Modo de visualizacion = Escritorio
+    // Probado en vivo en el layout legacy/TV (Modo de visualizacion = Escritorio
     // Heredado): el mismo anclaje a .headerSearchButton funciona, el icono se inserta bien...
     // y a los pocos segundos desaparece solo, sin ningun error ni mutacion que lo justifique
     // (comprobado con un MutationObserver propio sobre .headerRight). La barra legacy tiene su
