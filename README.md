@@ -101,7 +101,7 @@ Bandeja de avisos persistentes del administrador: desde una pagina del panel ("M
 
 El campo Link (spec 0003) absorbe el caso de uso "Announcements" (avisar de que el recap anual esta listo en una URL externa): en vez de un plugin aparte, es un mensaje broadcast con Link a esa URL.
 
-- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller/Jellyfin.Model 12.2.0, targetAbi 12.2.0.0) — confirmado en vivo contra la Pi y contra el POC (vm-titopc2).
+- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller/Jellyfin.Model 12.2.0, targetAbi 12.2.0.0) — confirmado en vivo contra un Jellyfin 12.2 real.
 - API: POST/GET /AdminMessages y PUT/DELETE /AdminMessages/{id} (admin); GET /AdminMessages/mine y POST /AdminMessages/{id}/read (usuario autenticado). Persistencia SQLite propia.
 - El script cliente usa Authorization: MediaBrowser Token="...".
 - Validado en vivo (POC): instalacion, permisos 401/403, inyeccion del icono en la barra superior en layout moderno (no se pudo probar legacy/TV).
