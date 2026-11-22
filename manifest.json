@@ -103,7 +103,8 @@
                 "checksum": "19cd37160e81d317530df08f2f21839e",
                 "timestamp": "2026-07-15T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/reviews-icon.png"
     },
     {
         "guid": "c3f4a9e2-8d1b-4f6a-9e3c-7a2b5d6e8f10",
@@ -161,7 +162,8 @@
                 "checksum": "3a2f54b5ae8fd58e723cd391aca690c9",
                 "timestamp": "2026-07-15T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/jellyask-icon.png"
     },
     {
         "guid": "56e27219-5a61-4f3b-96c2-e7e2e2076c0a",
@@ -179,7 +181,8 @@
                 "checksum": "58d7f56415d980753e2b35f4c0282682",
                 "timestamp": "2026-09-29T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/language-badges-icon.png"
     },
     {
         "guid": "8927bd8c-5eeb-4745-90c4-edb2ebd236cc",
@@ -197,7 +200,8 @@
                 "checksum": "f0de564994458d19e0eb22d4520fb0db",
                 "timestamp": "2026-09-29T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/search-notifier-icon.png"
     },
     {
         "guid": "63a86ee3-680e-4577-8a85-a0594cd8548a",
@@ -223,7 +227,8 @@
                 "checksum": "75289b6896be0b9d169db44af0eb9679",
                 "timestamp": "2026-10-12T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/weekly-pick-icon.png"
     },
     {
         "guid": "31e66f0b-a8e4-4e8a-be19-cf9d3678c691",
@@ -249,7 +254,8 @@
                 "checksum": "9ce4610ea0a27f1dc3b22aa4166b07bf",
                 "timestamp": "2026-11-05T23:53:13Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/admin-messages-icon.png"
     },
     {
         "guid": "351f939b-307a-44c6-a027-3b23fa1596a3",
@@ -267,6 +273,7 @@
                 "checksum": "3d75b21db820f6e5bdb266e9c1b725d0",
                 "timestamp": "2026-11-05T23:53:13Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/watchlist-icon.png"
     }
 ]

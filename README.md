@@ -14,6 +14,8 @@ Instala **Reviews**, **JellyAsk**, **Language Badges**, **Search Notifier**, **R
 
 ## Reviews
 
+![Reviews](docs/img/plugins/reviews-banner.png)
+
 Añade un bloque de reseñas de usuarios a la página de detalle de cada película o serie: valoración por estrellas en pasos de 0,5, comentario de texto y opción de publicar como usuario identificado de Jellyfin o de forma anónima.
 
 - API REST propia (`GET/POST /Reviews/{itemId}`), almacenamiento SQLite.
@@ -22,6 +24,8 @@ Añade un bloque de reseñas de usuarios a la página de detalle de cada pelícu
 Código en [`src/Reviews`](src/Reviews).
 
 ## JellyAsk
+
+![JellyAsk](docs/img/plugins/jellyask-banner.png)
 
 Añade un **botón flotante "Pedir película"** (ya no un enlace en el cajón lateral, que en el cliente web 12.x dejó de ser visible). Abre un formulario con un único campo de texto libre ("Incluye todos los detalles posibles para que podamos encontrar la película"); al enviarlo, registra la petición en el **Activity Log nativo de Jellyfin** (Panel de control → Actividad), visible para cualquier plugin de notificaciones (p. ej. un notificador de Telegram) que escuche esos eventos.
 
@@ -32,6 +36,8 @@ Añade un **botón flotante "Pedir película"** (ya no un enlace en el cajón la
 Código en [`src/JellyAsk`](src/JellyAsk).
 
 ## Language Badges
+
+![Language Badges](docs/img/plugins/language-badges-banner.png)
 
 Muestra, de un vistazo, en qué idioma está cada película o serie: chips de **audio** (`ES`, `EN`, `LAT`, `JA`...) sobre el póster en biblioteca, inicio y búsqueda, y una línea **Audio / Subtítulos** en la ficha. Los idiomas que el usuario prefiere se resaltan en amarillo. Lee los `MediaStreams` ya analizados por Jellyfin (incluye versiones alternativas; las series agregan sus episodios).
 
@@ -45,6 +51,8 @@ Muestra, de un vistazo, en qué idioma está cada película o serie: chips de **
 Código en [`src/LanguageBadges`](src/LanguageBadges).
 
 ## Search Notifier
+
+![Search Notifier](docs/img/plugins/search-notifier-banner.png)
 
 Avisa al admin cuando un usuario busca algo. Detecta cualquier petición con `searchTerm` (web, Android, Swiftfin, Kodi...), agrupa el "buscar mientras escribes" en una sola búsqueda y guarda **solo** usuario, término, nº de resultados y fecha. Cada búsqueda se anota en el **Registro de actividad** del panel de administración (visible ahí y reutilizable por cualquier plugin de notificaciones que lea la actividad, p. ej. hacia Telegram). Opcionalmente envía además un webhook JSON (`text` para Slack/Mattermost, `content` para Discord, o Telegram directo con `chat_id`). La opción "solo sin resultados" avisa de lo que alguien busca y no tienes.
 
@@ -60,6 +68,8 @@ Código en [`src/SearchNotifier`](src/SearchNotifier).
 
 ## Recomendación Semanal (WeeklyPick)
 
+![Recomendación Semanal](docs/img/plugins/weekly-pick-banner.png)
+
 Muestra un aviso emergente, una vez por semana (la semana se reinicia los viernes), con una recomendación personal del dueño de la filmoteca. Se configura desde su página en el panel de plugins.
 
 - Solo para **Jellyfin 12.2** (.NET 10, `Jellyfin.Controller` 12.2.0, targetAbi `12.2.0.0`).
@@ -69,6 +79,8 @@ Muestra un aviso emergente, una vez por semana (la semana se reinicia los vierne
 Código en [`src/WeeklyPick`](src/WeeklyPick).
 
 ## Blog
+
+![Blog de cine](docs/img/plugins/blog-banner.png)
 
 Blog de cine compartido, al estilo de los blogs clasicos de Blogspot: cualquier usuario con sesion lee y publica entradas (texto plano, etiquetas, titulos de la biblioteca mencionados, marca de spoilers) y comenta. Pantalla propia en #/blog con columna lateral (buscador, archivo por ano y mes, etiquetas, colaboradores y comentarios recientes). El autor edita y borra lo suyo; un admin puede borrar (no editar) contenido ajeno.
 
@@ -83,6 +95,8 @@ Codigo en [`src/Blog`](src/Blog).
 
 ## AdminMessages
 
+![AdminMessages](docs/img/plugins/admin-messages-banner.png)
+
 Bandeja de avisos persistentes del administrador: desde una pagina del panel ("Mensajes") se crean/editan/borran mensajes (titulo + cuerpo + link opcional) dirigidos a todos los usuarios o a una lista concreta. Cada usuario los ve en un desplegable anclado a un icono de campana en la barra superior, con contador de no leidos, boton "Abrir enlace" si el mensaje lleva uno, y puede marcarlos como leidos. Sin caducidad automatica, unidireccional (el usuario no responde) y sin aviso en vivo por WebSocket en esta v1 — ver SPECS.md (rama specs, seccion 0002) para el detalle y los defaults asumidos.
 
 El campo Link (spec 0003) absorbe el caso de uso "Announcements" (avisar de que el recap anual esta listo en una URL externa): en vez de un plugin aparte, es un mensaje broadcast con Link a esa URL.
@@ -95,6 +109,8 @@ El campo Link (spec 0003) absorbe el caso de uso "Announcements" (avisar de que 
 Codigo en [`src/AdminMessages`](src/AdminMessages).
 
 ## Watchlist (Mi lista)
+
+![Mi lista](docs/img/plugins/watchlist-banner.png)
 
 Lista personal "para ver" por usuario (distinta de Favoritos). Se anade/quita desde el menu de tres puntos de cualquier caratula o ficha (icono more_vert, cubre rejilla y detalle con el mismo selector), y "Mi lista" en el menu del usuario (junto a Perfil/Ajustes) abre la lista. Solo cliente web.
 

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400">
+  
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#075985"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".18" cy=".5" r=".8">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity=".30"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="400" fill="#0d1117"/>
+  <rect width="1280" height="400" fill="url(#glow)"/>
+  <g opacity=".06" transform="translate(900,-40) scale(4.6)" fill="#38bdf8">
+      <circle cx="42" cy="42" r="26" fill="none" stroke="#fff" stroke-width="9"/>
+      <path d="M62 62 L86 86" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="80" cy="20" r="14" fill="#fff"/>
+      <rect x="77.500" y="11" width="5" height="12" rx="2.500" fill="#38bdf8"/>
+      <circle cx="80" cy="27.500" r="3" fill="#38bdf8"/>
+    </g>
+  <rect x="0" y="396" width="1280" height="4" fill="url(#g)"/>
+  
+    <g transform="translate(80,80)">
+      <rect width="240" height="240" rx="55.2" fill="url(#g)"/>
+      <rect width="240" height="240" rx="55.2" fill="url(#shine)" />
+      <g transform="translate(48.0,48.0) scale(1.4400)">
+      <circle cx="42" cy="42" r="26" fill="none" stroke="#fff" stroke-width="9"/>
+      <path d="M62 62 L86 86" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="80" cy="20" r="14" fill="#fff"/>
+      <rect x="77.500" y="11" width="5" height="12" rx="2.500" fill="#075985"/>
+      <circle cx="80" cy="27.500" r="3" fill="#075985"/>
+    </g>
+    </g>
+  <text x="372" y="190" font-family="Liberation Sans, DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="64" fill="#ffffff">Search Notifier</text>
+  <rect x="374" y="212" width="72" height="6" rx="3" fill="#38bdf8"/>
+  <text x="372" y="268" font-family="Liberation Sans, DejaVu Sans, Arial, sans-serif" font-size="26" fill="#aab4c3">Te avisa de lo que busca tu gente, sobre todo de lo que no tienes</text>
+  <text x="372" y="318" font-family="Liberation Sans, DejaVu Sans, Arial, sans-serif" font-size="20" fill="#38bdf8" fill-opacity=".85">Plugin para Jellyfin</text>
+</svg>
