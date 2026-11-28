@@ -8,6 +8,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.6.0.0",
+                "changelog": "Si el plugin Blog 1.1 o superior está instalado, la ficha de una película muestra «Mencionada en el blog» con las entradas públicas que la citan. Actualiza SQLitePCLRaw a 2.1.14 (vulnerabilidad conocida).",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.6.0.0/Reviews_12.2.0.zip",
+                "checksum": "efd06e40fe1a545f2b12b36c69cbe766",
+                "timestamp": "2026-11-28T13:51:03Z"
+            },
+            {
                 "version": "1.5.1.0",
                 "changelog": "Accesibilidad completa (foco, lectores de pantalla, TV con mando), limite de 2000 caracteres y anti-flood (10 por titulo, 30 por hora), id invalido de Jellyfin 10.11 ya no da 500, y la sesion se revalida justo antes de publicar/editar/borrar en vez de fiarse de una lectura unica al cargar la ficha.",
                 "targetAbi": "12.2.0.0",
@@ -95,7 +103,8 @@
                 "checksum": "19cd37160e81d317530df08f2f21839e",
                 "timestamp": "2026-07-15T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/reviews-icon.png"
     },
     {
         "guid": "c3f4a9e2-8d1b-4f6a-9e3c-7a2b5d6e8f10",
@@ -161,7 +170,8 @@
                 "checksum": "3a2f54b5ae8fd58e723cd391aca690c9",
                 "timestamp": "2026-07-15T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/jellyask-icon.png"
     },
     {
         "guid": "56e27219-5a61-4f3b-96c2-e7e2e2076c0a",
@@ -187,7 +197,8 @@
                 "checksum": "58d7f56415d980753e2b35f4c0282682",
                 "timestamp": "2026-09-29T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/language-badges-icon.png"
     },
     {
         "guid": "8927bd8c-5eeb-4745-90c4-edb2ebd236cc",
@@ -213,7 +224,8 @@
                 "checksum": "f0de564994458d19e0eb22d4520fb0db",
                 "timestamp": "2026-09-29T00:00:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/search-notifier-icon.png"
     },
     {
         "guid": "63a86ee3-680e-4577-8a85-a0594cd8548a",
@@ -303,7 +315,8 @@
                 "checksum": "2b72f6fa1026b4443acdff91fccdc637",
                 "timestamp": "2026-10-10T23:30:00Z"
             }
-        ]
+        ],
+        "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/weekly-pick-icon.png"
     },
     {
         "guid": "1660e20b-ec3d-4424-91b0-4253e12de3c2",

@@ -43,6 +43,10 @@ PLUGINS = {
         description='Permite al administrador dejar avisos persistentes a los usuarios, que estos ven en una bandeja la siguiente vez que entren.',
         overview='Bandeja de avisos persistentes del administrador.',
         changelog='Entrada «Mensajes a usuarios» en el menú del panel de administración.'),
+    'Reviews': dict(
+        name='Reviews', guid='b7e1b6b4-6b1a-4a1a-9c1a-6f0b1e9c2d31', version='1.6.0.0', category='General', icon='reviews-icon.png',
+        description='Reviews', overview='Reviews', srcroot='~/jfp_work_reviews',
+        changelog='Si el plugin Blog 1.1 o superior está instalado, la ficha de una película muestra «Mencionada en el blog» con las entradas públicas que la citan. Actualiza SQLitePCLRaw a 2.1.14 (vulnerabilidad conocida).'),
     'WeeklyPick': dict(
         name='Recomendación Semanal', guid='63a86ee3-680e-4577-8a85-a0594cd8548a', version='1.5.3.0', category='General', icon='weekly-pick-icon.png',
         description='Recomendación semanal.', overview='Recomendación semanal.',
@@ -64,7 +68,8 @@ for folder in sys.argv[1:]:
     asm = 'Jellyfin.Plugin.%s' % folder
     pub = os.path.join('dist', 'publish-' + folder)
     shutil.rmtree(pub, ignore_errors=True)
-    subprocess.check_call([DOTNET, 'publish', 'src/%s/%s.csproj' % (folder, asm), '-c', 'Release', '-p:JellyfinVersion=12.2.0', '-o', pub, '--nologo', '-v', 'quiet'])
+    srcroot = os.path.expanduser(spec.get('srcroot', '.'))
+    subprocess.check_call([DOTNET, 'publish', os.path.join(srcroot, 'src/%s/%s.csproj' % (folder, asm)), '-c', 'Release', '-p:JellyfinVersion=12.2.0', '-o', pub, '--nologo', '-v', 'quiet'])
     meta = {
         'category': spec['category'], 'changelog': spec['changelog'], 'description': spec['description'], 'guid': spec['guid'],
         'name': spec['name'], 'overview': spec['overview'], 'owner': 'luiscorbachoflores', 'targetAbi': ABI, 'timestamp': now,

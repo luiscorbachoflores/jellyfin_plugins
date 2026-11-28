@@ -8,6 +8,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "1.6.0.0",
+                "changelog": "Si el plugin Blog 1.1 o superior está instalado, la ficha de una película muestra «Mencionada en el blog» con las entradas públicas que la citan. Actualiza SQLitePCLRaw a 2.1.14 (vulnerabilidad conocida).",
+                "targetAbi": "12.2.0.0",
+                "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/reviews-v1.6.0.0/Reviews_12.2.0.zip",
+                "checksum": "efd06e40fe1a545f2b12b36c69cbe766",
+                "timestamp": "2026-11-28T13:51:03Z"
+            },
+            {
                 "version": "1.5.1.0",
                 "changelog": "Accesibilidad completa (foco, lectores de pantalla, TV con mando), limite de 2000 caracteres y anti-flood (10 por titulo, 30 por hora), id invalido de Jellyfin 10.11 ya no da 500, y la sesion se revalida justo antes de publicar/editar/borrar en vez de fiarse de una lectura unica al cargar la ficha.",
                 "targetAbi": "12.2.0.0",
