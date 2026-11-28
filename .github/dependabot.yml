@@ -1,0 +1,24 @@
+# Avisos de dependencias vulnerables. Las versiones de Jellyfin.Controller y Jellyfin.Model se fijan a mano:
+# cada una ata el plugin a una version concreta de Jellyfin.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/src/Blog"
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: "Jellyfin.*"
+  - package-ecosystem: nuget
+    directory: "/src/Diary"
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: "Jellyfin.*"
+  - package-ecosystem: nuget
+    directory: "/src/Watchlist"
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: "Jellyfin.*"
+  - package-ecosystem: nuget
+    directory: "/src/AdminMessages"
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: "Jellyfin.*"
