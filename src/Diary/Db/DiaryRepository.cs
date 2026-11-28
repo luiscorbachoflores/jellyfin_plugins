@@ -292,7 +292,7 @@ public class DiaryRepository
     }
 
     /// <summary>Películas vistas en el año por al menos tres usuarios distintos. Solo cuenta audiencia,
-    /// sin nombres: es la base de «lo más visto de la Titoteca».</summary>
+    /// sin nombres: es la base de «lo más visto del servidor».</summary>
     public IReadOnlyList<(string ItemId, int Viewers)> GetCommunityTop(int year, int take)
     {
         using var c = Open();

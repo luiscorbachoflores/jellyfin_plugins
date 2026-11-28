@@ -10,7 +10,7 @@ public record StatFact(string Date, string ItemId, string Name, int? Year, int M
 
 public record CountBy(string Key, int Count);
 
-public record FilmRef(string ItemId, string Name, int? Year, string Date, int? Rating);
+public record FilmRef(string ItemId, string Name, int? Year, string Date, int? Rating, int Minutes = 0);
 
 public record StreakDto(int Days, string? From, string? To);
 
@@ -119,7 +119,7 @@ public static class DiaryStats
             mostRewatched, mostRewatched is null ? 0 : repeated.Times, NightShare(inYear), community);
     }
 
-    private static FilmRef Ref(StatFact f) => new(f.ItemId, f.Name, f.Year, f.Date, f.Rating);
+    private static FilmRef Ref(StatFact f) => new(f.ItemId, f.Name, f.Year, f.Date, f.Rating, f.Minutes);
 
     /// <summary>Racha más larga de días seguidos con al menos una película.</summary>
     public static StreakDto Streak(IEnumerable<DateTime> dates)

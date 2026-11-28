@@ -6,7 +6,7 @@
     }
     window.__diaryLoaded = true;
 
-    // Diario de cine de la Titoteca. Pantalla propia en #/diary (lista) y #/diary/year/AAAA (resumen del
+    // Diario de cine. Pantalla propia en #/diary (lista) y #/diary/year/AAAA (resumen del
     // año) pintada dentro de la ruta comodín de jellyfin-web (#fallbackPage). Mismos principios que el
     // Blog: no se tocan los nodos de React (solo se añade un <div data-diary-root> como último hijo), un
     // único MutationObserver agrupado en requestAnimationFrame, CSS acotado a [data-diary-root] y a
@@ -466,7 +466,7 @@
     function toggleAdder(box) {
         if (box.firstChild) { clear(box); return; }
         var chosen = null;
-        var q = el('input', { type: 'search', id: 'dSearch', placeholder: 'Busca una película de la Titoteca', autocomplete: 'off' });
+        var q = el('input', { type: 'search', id: 'dSearch', placeholder: 'Busca una película de tu biblioteca', autocomplete: 'off' });
         var results = el('div', { class: 'dResults' });
         var form = el('div', { class: 'dForm' });
         var timer = null;
@@ -564,7 +564,7 @@
     }
 
     function summaryText(year, s) {
-        var lines = ['Mi año ' + year + ' en la Titoteca', plural(s.Total, 'película', 'películas') + ' (' + s.Unique + ' distintas), ' + duration(s.Minutes)];
+        var lines = ['Mi año de cine ' + year, plural(s.Total, 'película', 'películas') + ' (' + s.Unique + ' distintas), ' + duration(s.Minutes)];
         if (s.TopGenres.length) { lines.push('Género favorito ' + s.TopGenres[0].Key); }
         if (s.AverageRating) { lines.push('Nota media ' + num(s.AverageRating) + ' de 5'); }
         if (s.TopRated.length) { lines.push('Lo mejor ' + filmRef(s.TopRated[0])); }
@@ -578,7 +578,7 @@
             if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(function () { toast('Resumen copiado.'); }, function () { toast('No se pudo copiar.'); }); }
             else { toast('Tu navegador no permite copiar.'); }
         });
-        host.appendChild(header('Tu año en la Titoteca', null, [el('a', { class: 'dBtn', href: '#/diary?year=' + year, text: 'Volver al diario' }), s.Total ? copy : null]));
+        host.appendChild(header('Tu año de cine', null, [el('a', { class: 'dBtn', href: '#/diary?year=' + year, text: 'Volver al diario' }), s.Total ? copy : null]));
         if (years.length > 1) { host.appendChild(yearChips(years, year, function (y) { return '#/diary/year/' + y; })); }
 
         if (!s.Total) {
@@ -676,7 +676,7 @@
             s.Community.forEach(function (c) {
                 shelf2.appendChild(el('a', { href: detailsHref(c.ItemId) }, [el('img', { loading: 'lazy', alt: '', src: posterUrl(c.ItemId) }), el('span', { text: c.Name }), el('br'), el('span', { class: 'dMuted', text: plural(c.Viewers, 'persona', 'personas') })]));
             });
-            host.appendChild(el('div', { class: 'wCard' }, [el('h2', { text: 'Lo más visto en la Titoteca' }), el('p', { class: 'wSub', text: 'Las películas que más gente ha visto este año.' }), shelf2]));
+            host.appendChild(el('div', { class: 'wCard' }, [el('h2', { text: 'Lo más visto en el servidor' }), el('p', { class: 'wSub', text: 'Las películas que más gente ha visto este año.' }), shelf2]));
         }
     }
 
