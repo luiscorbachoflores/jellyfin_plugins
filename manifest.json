@@ -216,8 +216,8 @@
                 "changelog": "Entrada «Recomendación semanal» en el menú del panel de administración.",
                 "targetAbi": "12.2.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/weeklypick-v1.5.3.0/WeeklyPick_12.2.0.zip",
-                "checksum": "72372699c046d0fd095da7ab8082d804",
-                "timestamp": "2026-11-28T12:23:20Z"
+                "checksum": "b1e1d0d994f4cdf7568842c2957725eb",
+                "timestamp": "2026-11-28T13:05:17Z"
             },
             {
                 "version": "1.5.2.0",
@@ -251,8 +251,8 @@
                 "changelog": "Entrada «Mensajes a usuarios» en el menú del panel de administración.",
                 "targetAbi": "12.2.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/adminmessages-v1.0.2.0/AdminMessages_12.2.0.zip",
-                "checksum": "ca4025a535380c22df144b6675e2f4e8",
-                "timestamp": "2026-11-28T12:23:20Z"
+                "checksum": "f9ca275c7408285a9221513d2b7c54ce",
+                "timestamp": "2026-11-28T13:05:17Z"
             },
             {
                 "version": "1.0.1.0",
@@ -286,8 +286,8 @@
                 "changelog": "Mi lista deja de ser una ventana emergente y pasa a ser una pantalla (#/watchlist) con filtro por películas y series, orden, duración y botón Sorpréndeme. Entrada en el menú del panel.",
                 "targetAbi": "12.2.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/watchlist-v1.1.0.0/Watchlist_12.2.0.zip",
-                "checksum": "4d2f59714100974e255271c16b7d7489",
-                "timestamp": "2026-11-28T12:23:20Z"
+                "checksum": "8082dfa58486789c4bcd3e5cb172af5c",
+                "timestamp": "2026-11-28T13:05:17Z"
             },
             {
                 "version": "1.0.0.0",
@@ -313,8 +313,8 @@
                 "changelog": "Borradores por usuario con autoguardado, entradas privadas (visibles solo para el autor y el administrador, que las ve en una pestaña aparte), publicación pública irreversible, menciones con @ y carátulas ordenables al final de la entrada, una portada por entrada, editor rehecho, configuración con lista de usuarios más clara y botón Blog en el menú del panel.",
                 "targetAbi": "12.2.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/blog-v1.1.0.0/Blog_12.2.0.zip",
-                "checksum": "f02e48cb25c41c331963119692bcef69",
-                "timestamp": "2026-11-28T12:23:20Z"
+                "checksum": "59e87f288b30649293778acd62fcde67",
+                "timestamp": "2026-11-28T13:05:17Z"
             }
         ],
         "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/blog-thumb.jpg"
@@ -332,8 +332,8 @@
                 "changelog": "Primera versión: diario privado por usuario, registro automático de visionados, notas, comentarios, importación del historial y resumen del año.",
                 "targetAbi": "12.2.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/diary-v1.0.0.0/Diary_12.2.0.zip",
-                "checksum": "ff2cb837e96ef2482b61fbf388244e0b",
-                "timestamp": "2026-11-28T12:23:20Z"
+                "checksum": "8d8388ea324a8738a811795d69cda765",
+                "timestamp": "2026-11-28T13:05:17Z"
             }
         ],
         "imageUrl": "https://raw.githubusercontent.com/luiscorbachoflores/jellyfin_plugins/main/docs/img/plugins/diary-icon.png"
