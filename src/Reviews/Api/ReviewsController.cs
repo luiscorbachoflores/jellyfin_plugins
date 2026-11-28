@@ -147,7 +147,6 @@ public class ReviewsController : ControllerBase
         var user = _userManager.GetUserById(userGuid);
         if (item is null || user is null || !item.IsVisible(user))
         {
-            _logger.LogWarning("Reviews: PUT {ReviewId} no encontrado o itemId no coincide (pedido={ItemId}, guardado={ExistingItemId}).", reviewId, itemId, existing?.ItemId);
             return NotFound();
         }
 
@@ -222,14 +221,12 @@ public class ReviewsController : ControllerBase
 
         if (!TryGetUser(out var userGuid, out _, out var isAdmin))
         {
-            _logger.LogWarning("Reviews: DELETE {ReviewId} rechazado, sin sesion valida (IsAuthenticated={IsAuth}).", reviewId, authInfo.IsAuthenticated);
             return Unauthorized();
         }
 
         var existing = await _repository.GetByIdAsync(reviewId, cancellationToken).ConfigureAwait(false);
         if (existing is null || !ids.Contains(existing.ItemId, StringComparer.OrdinalIgnoreCase))
         {
-            _logger.LogWarning("Reviews: DELETE {ReviewId} no encontrado o itemId no coincide (pedido={ItemId}, guardado={ExistingItemId}).", reviewId, itemId, existing?.ItemId);
             return NotFound();
         }
 
