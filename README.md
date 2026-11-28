@@ -197,7 +197,7 @@ Codigo en [`src/Diary`](src/Diary).
 
 ![AdminMessages](docs/img/plugins/admin-messages-banner.png)
 
-Bandeja de avisos persistentes del administrador: desde una pagina del panel ("Mensajes") se crean/editan/borran mensajes (titulo + cuerpo + link opcional) dirigidos a todos los usuarios o a una lista concreta. Cada usuario los ve en un desplegable anclado a un icono de campana en la barra superior, con contador de no leidos, boton "Abrir enlace" si el mensaje lleva uno, y puede marcarlos como leidos. Sin caducidad automatica, unidireccional (el usuario no responde) y sin aviso en vivo por WebSocket en esta v1 — ver SPECS.md (rama specs, seccion 0002) para el detalle y los defaults asumidos.
+Bandeja de avisos persistentes del administrador: desde una pagina del panel ("Mensajes") se crean/editan/borran mensajes (titulo + cuerpo + link opcional) dirigidos a todos los usuarios o a una lista concreta. Cada usuario los ve en un desplegable anclado a un icono de campana en la barra superior, con contador de no leidos, boton "Abrir enlace" si el mensaje lleva uno, y puede marcarlos como leidos. Sin caducidad automatica, unidireccional (el usuario no responde) y sin aviso en vivo por WebSocket en esta v1 — ver [docs/SPECS.md](docs/SPECS.md) (seccion 0002) para el detalle y los defaults asumidos.
 
 El campo Link (spec 0003) absorbe el caso de uso "Announcements" (avisar de que el recap anual esta listo en una URL externa): en vez de un plugin aparte, es un mensaje broadcast con Link a esa URL.
 
