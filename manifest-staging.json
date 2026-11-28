@@ -347,11 +347,11 @@
         "versions": [
             {
                 "version": "1.0.1.0",
-                "changelog": "Borrar una entrada ahora pide confirmación en pantalla (Sí, borrar o No) en vez de pulsar dos veces, muestra el error si el servidor falla y quita la fila al momento.",
+                "changelog": "Borrar una entrada ahora pide confirmación en pantalla (Sí, borrar o No) en vez de pulsar dos veces, muestra el error si el servidor falla quita la fila al momento y las importadas que borras ya no vuelven a aparecer al importar de nuevo.",
                 "targetAbi": "12.2.0.0",
                 "sourceUrl": "https://github.com/luiscorbachoflores/jellyfin_plugins/releases/download/diary-v1.0.1.0/Diary_12.2.0.zip",
-                "checksum": "05ffdb903abb4df15569f204e95ff4b4",
-                "timestamp": "2026-11-28T15:21:57Z"
+                "checksum": "388edf831c802f3e2ffedb976764bd2c",
+                "timestamp": "2026-11-28T15:28:03Z"
             },
             {
                 "version": "1.0.0.0",

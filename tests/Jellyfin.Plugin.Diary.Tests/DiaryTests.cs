@@ -167,6 +167,24 @@ public sealed class DiaryRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void UnaImportadaBorradaNoVuelveAImportarse()
+    {
+        var id = _repo.Add("u", "peli", T, "2026-05-10", DiarySource.Imported, null, null);
+        Assert.Contains("peli", _repo.GetItemIds("u"));
+        Assert.True(_repo.Delete(id, "u"));
+        Assert.Empty(_repo.GetForUser("u", null));
+        Assert.Contains("peli", _repo.GetItemIds("u"));
+    }
+
+    [Fact]
+    public void UnaManualBorradaSiPuedeVolverAImportarse()
+    {
+        var id = _repo.Add("u", "peli", T, "2026-05-10", DiarySource.Manual, null, null);
+        Assert.True(_repo.Delete(id, "u"));
+        Assert.DoesNotContain("peli", _repo.GetItemIds("u"));
+    }
+
+    [Fact]
     public void ActualizarNotaFechaYComentario()
     {
         var id = _repo.Add("u", "i", T, "2026-05-10", DiarySource.Manual, null, null);

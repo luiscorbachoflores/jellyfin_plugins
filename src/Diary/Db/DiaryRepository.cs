@@ -59,7 +59,12 @@ public class DiaryRepository
                 CreatedUtc TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS IX_Diary_User_Date ON DiaryEntries (UserId, WatchedDate);
-            CREATE INDEX IF NOT EXISTS IX_Diary_User_Item ON DiaryEntries (UserId, ItemId);";
+            CREATE INDEX IF NOT EXISTS IX_Diary_User_Item ON DiaryEntries (UserId, ItemId);
+            CREATE TABLE IF NOT EXISTS DiaryImportSkips (
+                UserId TEXT NOT NULL,
+                ItemId TEXT NOT NULL,
+                PRIMARY KEY (UserId, ItemId)
+            );";
         cmd.ExecuteNonQuery();
     }
 
@@ -207,14 +212,27 @@ public class DiaryRepository
         return cmd.ExecuteNonQuery() > 0;
     }
 
+    /// <summary>Borra una entrada. Si era importada, se recuerda para que «Traer lo que ya he visto»
+    /// no la vuelva a crear (Jellyfin seguiría marcando la película como vista).</summary>
     public bool Delete(long id, string userId)
     {
         using var c = Open();
+        using var tx = c.BeginTransaction();
+        var skip = c.CreateCommand();
+        skip.Transaction = tx;
+        skip.CommandText = @"INSERT OR IGNORE INTO DiaryImportSkips (UserId, ItemId)
+            SELECT UserId, ItemId FROM DiaryEntries WHERE Id = $id AND UserId = $u AND Source = 'imported'";
+        skip.Parameters.AddWithValue("$id", id);
+        skip.Parameters.AddWithValue("$u", userId);
+        skip.ExecuteNonQuery();
         var cmd = c.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = "DELETE FROM DiaryEntries WHERE Id = $id AND UserId = $u";
         cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$u", userId);
-        return cmd.ExecuteNonQuery() > 0;
+        var deleted = cmd.ExecuteNonQuery() > 0;
+        tx.Commit();
+        return deleted;
     }
 
     /// <summary>Entradas del usuario de un año (o todas si year es null), más recientes primero.</summary>
@@ -258,12 +276,13 @@ public class DiaryRepository
         return list;
     }
 
-    /// <summary>Ids de las películas que el usuario ya tiene en el diario.</summary>
+    /// <summary>Ids que la importación debe saltarse: las que el usuario ya tiene en el diario y las
+    /// importadas que borró a propósito.</summary>
     public HashSet<string> GetItemIds(string userId)
     {
         using var c = Open();
         var cmd = c.CreateCommand();
-        cmd.CommandText = "SELECT DISTINCT ItemId FROM DiaryEntries WHERE UserId = $u";
+        cmd.CommandText = "SELECT ItemId FROM DiaryEntries WHERE UserId = $u UNION SELECT ItemId FROM DiaryImportSkips WHERE UserId = $u";
         cmd.Parameters.AddWithValue("$u", userId);
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var r = cmd.ExecuteReader();
