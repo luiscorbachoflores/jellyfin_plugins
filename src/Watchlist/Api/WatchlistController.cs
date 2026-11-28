@@ -97,7 +97,8 @@ public class WatchlistController : ControllerBase
                 kind,
                 item.ProductionYear,
                 item.HasImage(MediaBrowser.Model.Entities.ImageType.Primary, 0),
-                entry.AddedUtc));
+                entry.AddedUtc,
+                (int)Math.Round((item.RunTimeTicks ?? 0) / (double)TimeSpan.TicksPerMinute)));
         }
 
         if (missing.Count > 0)

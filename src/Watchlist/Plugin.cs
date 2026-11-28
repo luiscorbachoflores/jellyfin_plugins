@@ -18,7 +18,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     public override string Name => "Watchlist";
 
-    public override string Description => "Lista personal «para ver» por usuario: botón en la ficha de películas y series y entrada «Mi lista» en el menú del usuario.";
+    public override string Description => "Lista personal «para ver» por usuario: botón en la ficha de películas y series y entrada «Mi lista» en el menú del usuario, que abre su propia pantalla en #/watchlist.";
 
     public override Guid Id => Guid.Parse("351f939b-307a-44c6-a027-3b23fa1596a3");
 
@@ -31,6 +31,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = Name,
+                DisplayName = "Mi lista (admin)",
+                EnableInMainMenu = true,
+                MenuSection = "server",
+                MenuIcon = "bookmark",
                 EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace),
             },
         };
