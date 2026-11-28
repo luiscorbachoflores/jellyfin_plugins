@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diario</title>
+</head>
+<body>
+    <div id="DiaryConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="DiaryConfigForm">
+                    <div class="verticalSection">
+                        <h2>Diario de cine</h2>
+                        <p>Cada usuario tiene su diario en <code>#/diary</code>, con un acceso «Mi diario» en el menú de su perfil. Es privado: ni siquiera el administrador ve qué películas hay en cada diario, solo cuántas entradas tiene cada uno.</p>
+                        <p class="fieldDescription">Una película entra sola cuando se termina de ver (anotada como «vista aquí») o cuando se pulsa «marcar como visto» (anotada como «marcada a mano»). Reproducirla a medias no cuenta. Cada persona puede cambiar la fecha, poner nota, escribir un comentario o borrar entradas.</p>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="DiaryDedupe">Horas para considerar un mismo visionado</label>
+                        <input is="emby-input" type="number" id="DiaryDedupe" min="1" max="168" />
+                        <div class="fieldDescription">Si alguien ve una película y después la marca como vista dentro de este margen, se apunta una sola vez. Por defecto 12.</div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Historial anterior</h3>
+                        <p class="fieldDescription">El diario solo apunta lo que ocurre desde que se instala el plugin. Para traer lo que Jellyfin ya tenía como visto, usa este botón. Jellyfin solo guarda la última fecha de cada película, así que las repeticiones antiguas no se pueden recuperar. No duplica lo que ya esté apuntado. Cada usuario también puede hacerlo desde su propio diario.</p>
+                        <button is="emby-button" type="button" class="raised" id="DiaryImportAll"><span>Importar el historial de todos los usuarios</span></button>
+                        <div class="fieldDescription" id="DiaryImportResult" style="margin-top:.6em;"></div>
+                    </div>
+
+                    <div class="verticalSection" style="margin-top:1.5em;">
+                        <h3 class="sectionTitle">Entradas por usuario</h3>
+                        <div id="DiarySummary" class="fieldDescription">Cargando…</div>
+                    </div>
+
+                    <div style="margin-top:1.5em;">
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Guardar</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = "5d0c2a41-7b3e-4f6d-9a18-2c4e6f8b0d13";
+
+                function esc(s) {
+                    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                }
+
+                function auth() {
+                    return { Authorization: 'MediaBrowser Token="' + ApiClient.accessToken() + '"' };
+                }
+
+                function loadSummary() {
+                    var box = document.querySelector("#DiarySummary");
+                    fetch(ApiClient.serverAddress() + "/Diary/Admin/Summary", { headers: auth() }).then(function (r) {
+                        return r.ok ? r.json() : Promise.reject(r.status);
+                    }).then(function (rows) {
+                        if (!rows.length) { box.textContent = "Todavía no hay entradas."; return; }
+                        box.innerHTML = rows.map(function (u) {
+                            return "<div style=\"display:flex;gap:1em;padding:.35em 0;border-bottom:1px solid rgba(128,128,128,.25);\">" +
+                                "<span style=\"flex:1;\">" + esc(u.UserName) + "</span>" +
+                                "<span>" + u.Entries + (u.Entries === 1 ? " entrada" : " entradas") + "</span>" +
+                                "<span style=\"min-width:7em;text-align:right;\">" + esc(u.Last || "") + "</span></div>";
+                        }).join("");
+                    }, function () { box.textContent = "No se pudo cargar el resumen."; });
+                }
+
+                document.querySelector("#DiaryConfigPage").addEventListener("pageshow", function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        document.querySelector("#DiaryDedupe").value = config.DedupeHours || 12;
+                        Dashboard.hideLoadingMsg();
+                    });
+                    loadSummary();
+                });
+
+                document.querySelector("#DiaryImportAll").addEventListener("click", function () {
+                    var out = document.querySelector("#DiaryImportResult");
+                    out.textContent = "Importando…";
+                    fetch(ApiClient.serverAddress() + "/Diary/Admin/ImportAll", { method: "POST", headers: auth() }).then(function (r) {
+                        return r.ok ? r.json() : Promise.reject(r.status);
+                    }).then(function (res) {
+                        out.textContent = "Listo: " + res.Added + " películas añadidas, " + res.Skipped + " ya estaban.";
+                        loadSummary();
+                    }, function () { out.textContent = "No se pudo importar."; });
+                });
+
+                document.querySelector("#DiaryConfigForm").addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    var hours = parseInt(document.querySelector("#DiaryDedupe").value, 10);
+                    if (!(hours >= 1 && hours <= 168)) { hours = 12; }
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.DedupeHours = hours;
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
