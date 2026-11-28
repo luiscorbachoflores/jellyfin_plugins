@@ -1,5 +1,5 @@
 # Avisos de dependencias vulnerables. Las versiones de Jellyfin.Controller y Jellyfin.Model se fijan a mano:
-# cada una ata el plugin a una version concreta de Jellyfin.
+# cada una ata el plugin a una version concreta de Jellyfin. Los saltos de version mayor de SQLite se prueban a mano.
 version: 2
 updates:
   - package-ecosystem: nuget
@@ -7,18 +7,34 @@ updates:
     schedule: { interval: weekly }
     ignore:
       - dependency-name: "Jellyfin.*"
+      - dependency-name: "Microsoft.Data.Sqlite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "SQLitePCLRaw.*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: nuget
     directory: "/src/Diary"
     schedule: { interval: weekly }
     ignore:
       - dependency-name: "Jellyfin.*"
+      - dependency-name: "Microsoft.Data.Sqlite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "SQLitePCLRaw.*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: nuget
     directory: "/src/Watchlist"
     schedule: { interval: weekly }
     ignore:
       - dependency-name: "Jellyfin.*"
+      - dependency-name: "Microsoft.Data.Sqlite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "SQLitePCLRaw.*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: nuget
     directory: "/src/AdminMessages"
     schedule: { interval: weekly }
     ignore:
       - dependency-name: "Jellyfin.*"
+      - dependency-name: "Microsoft.Data.Sqlite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "SQLitePCLRaw.*"
+        update-types: ["version-update:semver-major"]
