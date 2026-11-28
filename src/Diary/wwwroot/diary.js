@@ -79,6 +79,10 @@
         S('.dIconBtn', 'font:inherit;background:transparent;border:none;color:var(--d-muted);cursor:pointer;padding:.5em;min-width:44px;min-height:44px;border-radius:6px;'),
         S('.dIconBtn:hover', 'color:var(--d-ink);background:var(--d-surface);'),
         S('.dEdit', 'grid-column:1 / -1;background:var(--d-surface);border:1px solid var(--d-line);border-radius:8px;padding:1em;margin:.6em 0 .2em;display:grid;gap:.9em;'),
+        S('.dConfirm', 'border:1px solid var(--d-danger);border-radius:8px;padding:.9em 1em;display:grid;gap:.6em;'),
+        S('.dConfirm[hidden]', 'display:none;'),
+        S('.dConfirmText', 'margin:0;'),
+        S('.dConfirmErr', 'margin:0;color:var(--d-danger);'),
         S('.dField label', 'display:block;color:var(--d-muted);font-size:.85em;margin-bottom:.3em;'),
         S('.dField input,.dField textarea', 'width:100%;font:inherit;color:var(--d-ink);background:var(--d-field);border:1px solid var(--d-line);border-radius:6px;padding:.55em .7em;'),
         S('.dField textarea', 'min-height:6em;resize:vertical;font-family:var(--d-serif);font-size:1.02em;line-height:1.5;'),
@@ -435,11 +439,30 @@
         text.value = e.Note || '';
         var rating = e.Rating || 0;
         var stars = starsEl(rating, function (v) { rating = v; });
-        var del = button('Borrar del diario', 'dBtnDanger');
-        var armed = false;
-        del.addEventListener('click', function () {
-            if (!armed) { armed = true; del.textContent = 'Pulsa otra vez para borrar'; setTimeout(function () { armed = false; del.textContent = 'Borrar del diario'; }, 4000); return; }
-            request('DELETE', '/Diary/Entries/' + e.Id).then(function () { reload(); }, function () { toast('No se pudo borrar.'); });
+        var confirmBox = el('div', { class: 'dConfirm', role: 'alertdialog', 'aria-label': 'Confirmar borrado', hidden: true });
+        var del = button('Borrar del diario', 'dBtnDanger', function () {
+            clear(confirmBox);
+            var msg = el('p', { class: 'dConfirmText', text: '¿Borrar «' + e.Name + '» de tu diario? No se puede deshacer.' });
+            var err = el('p', { class: 'dConfirmErr', role: 'alert' });
+            var yes = button('Sí, borrar', 'dBtnDanger');
+            var no = button('No', '', function () { confirmBox.hidden = true; del.hidden = false; del.focus(); });
+            yes.addEventListener('click', function () {
+                yes.disabled = true; no.disabled = true; yes.textContent = 'Borrando…'; err.textContent = '';
+                request('DELETE', '/Diary/Entries/' + e.Id).then(function () {
+                    if (row.parentNode) { row.parentNode.removeChild(row); }
+                    toast('Entrada borrada de tu diario.');
+                    reload();
+                }, function (ex) {
+                    yes.disabled = false; no.disabled = false; yes.textContent = 'Sí, borrar';
+                    err.textContent = 'No se pudo borrar' + (ex && ex.status ? ' (error ' + ex.status + ')' : '') + '. Prueba otra vez.';
+                });
+            });
+            confirmBox.appendChild(msg);
+            confirmBox.appendChild(err);
+            confirmBox.appendChild(el('div', { class: 'dBar' }, [yes, no]));
+            confirmBox.hidden = false;
+            del.hidden = true;
+            no.focus();
         });
         var save = button('Guardar', 'dBtnMain', function () {
             var body = { Date: date.value || e.Date, SetNote: true, Note: text.value };
@@ -455,7 +478,8 @@
             el('div', { class: 'dField' }, [el('label', { for: 'dDate' + e.Id, text: 'Fecha en que la viste' }), date]),
             el('div', { class: 'dField' }, [el('label', { text: 'Nota' }), stars]),
             el('div', { class: 'dField' }, [el('label', { for: 'dText' + e.Id, text: 'Comentario' }), text]),
-            el('div', { class: 'dBar' }, [save, cancel, del])
+            el('div', { class: 'dBar' }, [save, cancel, del]),
+            confirmBox
         ]);
         row.appendChild(panel);
         date.focus();

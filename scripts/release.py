@@ -29,10 +29,10 @@ PLUGINS = {
         overview='Pantalla propia en #/blog. Cada usuario tiene sus borradores y puede publicar en privado (solo el autor y el administrador); una entrada pública ya no vuelve a privada. Se mencionan películas con @ y salen sus carátulas al final, en el orden que elige el autor. Una imagen por entrada. Comentarios, etiquetas y archivo.',
         changelog='Borradores por usuario con autoguardado, entradas privadas (visibles solo para el autor y el administrador, que las ve en una pestaña aparte), publicación pública irreversible, menciones con @ y carátulas ordenables al final de la entrada, una portada por entrada, editor rehecho, configuración con lista de usuarios más clara y botón Blog en el menú del panel.'),
     'Diary': dict(
-        name='Diary', guid='5d0c2a41-7b3e-4f6d-9a18-2c4e6f8b0d13', version='1.0.0.0', category='General', icon='diary-icon.png',
+        name='Diary', guid='5d0c2a41-7b3e-4f6d-9a18-2c4e6f8b0d13', version='1.0.1.0', category='General', icon='diary-icon.png',
         description='Diario de cine por usuario en #/diary: lo que has visto, con fecha y nota, y un resumen del año.',
         overview='Cada película que terminas de ver (o marcas como vista) se apunta sola en tu diario privado, con su fecha. Puedes cambiar la fecha, puntuar en medias estrellas, comentar, añadir películas a mano e importar lo que Jellyfin ya tenía como visto. Incluye el resumen «Tu año en la Titoteca». El administrador solo ve cuántas entradas tiene cada usuario.',
-        changelog='Primera versión: diario privado por usuario, registro automático de visionados, notas, comentarios, importación del historial y resumen del año.'),
+        changelog='Borrar una entrada ahora pide confirmación en pantalla (Sí, borrar o No) en vez de pulsar dos veces, muestra el error si el servidor falla y quita la fila al momento.'),
     'Watchlist': dict(
         name='Watchlist', guid='351f939b-307a-44c6-a027-3b23fa1596a3', version='1.1.0.0', category='General', icon='watchlist-icon.png',
         description='Lista personal «para ver» por usuario: «Mi lista» en el menú del usuario abre su propia pantalla, y botón en el menú de tres puntos de cualquier carátula o ficha.',
