@@ -98,6 +98,10 @@
         '.reviewsWidget{margin:1.8em 0;max-width:46em;color:inherit;font:inherit;--rv-accent:var(--jf-palette-primary-main,#00a4dc);--rv-accent-fg:var(--jf-palette-primary-contrastText,rgba(0,0,0,.87));--rv-star:var(--jf-palette-starIcon-main,#f2b01e)}',
         '.reviewsWidget h2{margin:0 0 .8em;font-size:1.2em;font-weight:500}',
         '.reviewsAverage{margin-bottom:1em;opacity:.85}',
+        '.reviewsBlogMentions:empty{display:none}',
+        '.reviewsBlogMention{margin:0 0 .8em;padding:.6em 1em;border-left:3px solid var(--tt-gold,#e6c75b);background:rgba(255,255,255,.05);border-radius:0 3px 3px 0;line-height:1.5}',
+        '.reviewsBlogMention .reviewsBlogTag{display:block;font-size:.8em;opacity:.7;margin-bottom:.1em}',
+        '.reviewsBlogMention a{color:var(--tt-coral,var(--rv-accent,inherit))}',
         '.reviewsForm{display:flex;flex-direction:column;gap:.75em;margin-bottom:1.6em}',
         '.reviewsStars{display:inline-flex;font-size:1.7em;line-height:1;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;align-self:flex-start;border-radius:.2em}',
         '.reviewsStars:not([data-interactive]){cursor:default}',
@@ -300,6 +304,8 @@
         var listEl = h('div', { 'class': 'reviewsList' }, [h('p', { 'class': 'reviewsEmpty', text: 'Cargando…' })]);
         container.appendChild(h('h2', { text: 'Reseñas' }));
         container.appendChild(avgEl);
+        var blogMentionsEl = h('div', { 'class': 'reviewsBlogMentions' });
+        container.appendChild(blogMentionsEl);
 
         var starsCtl = null, anonInput = null, previewEl = null, textarea = null, submitBtn = null, cancelBtn = null, statusEl = null, countEl = null;
 
@@ -479,7 +485,32 @@
             });
         }
 
+        // Si el plugin Blog esta instalado, avisa de las entradas publicas que mencionan este titulo.
+        // Es una linea mas en la ficha, no una resena: si la entrada se borra o deja de ser publica
+        // desaparece sola. Si el Blog no esta, no responde o no hay sesion, no se pinta nada.
+        function loadBlogMentions() {
+            fetch(apiUrl('Blog/Mentions/' + encodeURIComponent(itemId)), { headers: authHeaders() }).then(function (r) {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                return r.json();
+            }).then(function (data) {
+                blogMentionsEl.textContent = '';
+                var posts = (data && data.Posts) || [];
+                posts.forEach(function (p) {
+                    var link = h('a', { href: '#/blog?post=' + encodeURIComponent(p.Id), text: p.Title || 'Sin título' });
+                    var line = h('div', { 'class': 'reviewsBlogMention' }, [h('span', { 'class': 'reviewsBlogTag', text: 'Mencionada en el blog' }), link]);
+                    line.appendChild(document.createTextNode(' · ' + p.AuthorName));
+                    blogMentionsEl.appendChild(line);
+                });
+                if (data && (data.Total || 0) > posts.length) {
+                    blogMentionsEl.appendChild(h('div', { 'class': 'reviewsBlogMention' }, [
+                        h('a', { href: '#/blog?item=' + encodeURIComponent(itemId), text: 'Ver todas las entradas que la mencionan' })
+                    ]));
+                }
+            }).catch(function () { blogMentionsEl.textContent = ''; });
+        }
+
         function refresh() {
+            loadBlogMentions();
             return fetchReviews(itemId).then(function (data) {
                 if (!container.isConnected && !container.parentNode) { return; }
                 container.__loadedAt = Date.now();
