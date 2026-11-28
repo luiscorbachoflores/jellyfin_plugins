@@ -17,7 +17,9 @@ public record PostRecord(
     string? UpdatedUtc,
     IReadOnlyList<string> Labels,
     IReadOnlyList<Guid> MentionItemIds,
-    int CommentCount);
+    int CommentCount,
+    string Visibility = BlogVisibility.Public,
+    string? PublishedUtc = null);
 
 public record CommentRecord(Guid Id, Guid PostId, string AuthorUserId, string Body, string CreatedUtc, string? UpdatedUtc);
 
@@ -26,7 +28,9 @@ public record PostRef(Guid Id, string Title);
 public record PostPage(IReadOnlyList<PostRecord> Posts, int Page, bool HasNewer, bool HasOlder);
 
 /// <summary>Filtros combinables de la lista de entradas. Todos opcionales.</summary>
-public record PostQuery(string? Label = null, string? Archive = null, string? AuthorUserId = null, Guid? ItemId = null, string? Text = null);
+public record PostQuery(string? Label = null, string? Archive = null, string? AuthorUserId = null, Guid? ItemId = null, string? Text = null, string Visibility = BlogVisibility.Public);
+
+public record OwnCounts(int Drafts, int Private);
 
 public record ArchiveMonth(int Month, int Count, IReadOnlyList<PostRef> Posts);
 
@@ -71,7 +75,9 @@ public class BlogRepository
                 Body TEXT NOT NULL,
                 HasSpoilers INTEGER NOT NULL,
                 CreatedUtc TEXT NOT NULL,
-                UpdatedUtc TEXT NULL
+                UpdatedUtc TEXT NULL,
+                Visibility TEXT NOT NULL DEFAULT 'public',
+                PublishedUtc TEXT NULL
             );
             CREATE TABLE IF NOT EXISTS PostLabel (
                 PostId TEXT NOT NULL,
@@ -99,6 +105,35 @@ public class BlogRepository
             CREATE INDEX IF NOT EXISTS IX_Comment_Post ON Comment (PostId, CreatedUtc);
             CREATE INDEX IF NOT EXISTS IX_Comment_Created ON Comment (CreatedUtc);";
         cmd.ExecuteNonQuery();
+
+        // Migración de bases de datos anteriores: todo lo que ya existía era público.
+        var hasVisibility = false;
+        using (var info = connection.CreateCommand())
+        {
+            info.CommandText = "PRAGMA table_info(Post)";
+            using var r = info.ExecuteReader();
+            while (r.Read())
+            {
+                if (string.Equals(r.GetString(1), "Visibility", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasVisibility = true;
+                }
+            }
+        }
+
+        if (!hasVisibility)
+        {
+            using var alter = connection.CreateCommand();
+            alter.CommandText = @"
+                ALTER TABLE Post ADD COLUMN Visibility TEXT NOT NULL DEFAULT 'public';
+                ALTER TABLE Post ADD COLUMN PublishedUtc TEXT NULL;
+                UPDATE Post SET PublishedUtc = CreatedUtc WHERE PublishedUtc IS NULL;";
+            alter.ExecuteNonQuery();
+        }
+
+        using var idx = connection.CreateCommand();
+        idx.CommandText = "CREATE INDEX IF NOT EXISTS IX_Post_Visibility ON Post (Visibility, PublishedUtc);";
+        idx.ExecuteNonQuery();
     }
 
     // ------------------------------------------------------------------ posts
@@ -114,20 +149,22 @@ public class BlogRepository
         using (var cmd = connection.CreateCommand())
         {
             cmd.Transaction = tx;
-            cmd.CommandText = "INSERT INTO Post (Id, AuthorUserId, Title, Body, HasSpoilers, CreatedUtc, UpdatedUtc) VALUES ($id, $author, $title, $body, $spoilers, $created, NULL)";
+            cmd.CommandText = "INSERT INTO Post (Id, AuthorUserId, Title, Body, HasSpoilers, CreatedUtc, UpdatedUtc, Visibility, PublishedUtc) VALUES ($id, $author, $title, $body, $spoilers, $created, NULL, $vis, $published)";
             cmd.Parameters.AddWithValue("$id", id.ToString("D"));
             cmd.Parameters.AddWithValue("$author", authorUserId);
             cmd.Parameters.AddWithValue("$title", post.Title);
             cmd.Parameters.AddWithValue("$body", post.Body);
             cmd.Parameters.AddWithValue("$spoilers", post.HasSpoilers ? 1 : 0);
             cmd.Parameters.AddWithValue("$created", now);
+            cmd.Parameters.AddWithValue("$vis", post.Visibility);
+            cmd.Parameters.AddWithValue("$published", post.Visibility == BlogVisibility.Public ? now : DBNull.Value);
             cmd.ExecuteNonQuery();
         }
 
         InsertLabelsAndMentions(connection, tx, id, post);
         tx.Commit();
 
-        return new PostRecord(id, authorUserId, post.Title, post.Body, post.HasSpoilers, now, null, post.Labels, post.MentionItemIds, 0);
+        return new PostRecord(id, authorUserId, post.Title, post.Body, post.HasSpoilers, now, null, post.Labels, post.MentionItemIds, 0, post.Visibility, post.Visibility == BlogVisibility.Public ? now : null);
     }
 
     /// <summary>Reemplaza el contenido de la entrada y fija UpdatedUtc. Null si no existe.</summary>
@@ -142,12 +179,20 @@ public class BlogRepository
             using (var cmd = connection.CreateCommand())
             {
                 cmd.Transaction = tx;
-                cmd.CommandText = "UPDATE Post SET Title = $title, Body = $body, HasSpoilers = $spoilers, UpdatedUtc = $updated WHERE Id = $id";
+                // Al publicar (borrador/privada -> publica) la fecha de publicacion es ahora y no
+                // se marca como editada. Una publica solo puede seguir siendo publica (lo valida el
+                // controlador; la condicion del WHERE lo refuerza).
+                cmd.CommandText = @"UPDATE Post SET Title = $title, Body = $body, HasSpoilers = $spoilers,
+                    UpdatedUtc = CASE WHEN Visibility <> 'public' AND $vis = 'public' THEN NULL ELSE $updated END,
+                    PublishedUtc = CASE WHEN Visibility <> 'public' AND $vis = 'public' THEN $updated ELSE PublishedUtc END,
+                    Visibility = $vis
+                    WHERE Id = $id AND (Visibility <> 'public' OR $vis = 'public')";
                 cmd.Parameters.AddWithValue("$id", id.ToString("D"));
                 cmd.Parameters.AddWithValue("$title", post.Title);
                 cmd.Parameters.AddWithValue("$body", post.Body);
                 cmd.Parameters.AddWithValue("$spoilers", post.HasSpoilers ? 1 : 0);
                 cmd.Parameters.AddWithValue("$updated", now);
+                cmd.Parameters.AddWithValue("$vis", post.Visibility);
                 affected = cmd.ExecuteNonQuery();
             }
 
@@ -239,8 +284,8 @@ public class BlogRepository
     public PostPage QueryPosts(PostQuery query, int page)
     {
         page = Math.Max(1, page);
-        var where = new List<string>();
-        var parameters = new List<(string, object)>();
+        var where = new List<string> { "p.Visibility = $vis" };
+        var parameters = new List<(string, object)> { ("$vis", query.Visibility) };
 
         var label = BlogValidation.NormalizeLabel(query.Label);
         if (!string.IsNullOrWhiteSpace(query.Label))
@@ -257,7 +302,7 @@ public class BlogRepository
 
         if (!string.IsNullOrEmpty(query.Archive))
         {
-            where.Add("substr(p.CreatedUtc, 1, 7) = $archive");
+            where.Add("substr(p.PublishedUtc, 1, 7) = $archive");
             parameters.Add(("$archive", query.Archive));
         }
 
@@ -280,7 +325,7 @@ public class BlogRepository
         }
 
         var whereSql = where.Count == 0 ? string.Empty : "WHERE " + string.Join(" AND ", where);
-        var tail = $"ORDER BY p.CreatedUtc DESC, p.Id DESC LIMIT {BlogLimits.PageSize + 1} OFFSET {(page - 1) * BlogLimits.PageSize}";
+        var tail = $"ORDER BY COALESCE(p.PublishedUtc, p.UpdatedUtc, p.CreatedUtc) DESC, p.Id DESC LIMIT {BlogLimits.PageSize + 1} OFFSET {(page - 1) * BlogLimits.PageSize}";
 
         using var connection = Open();
         var rows = ReadPosts(connection, whereSql, parameters, tail);
@@ -294,7 +339,7 @@ public class BlogRepository
         string? created = null;
         using (var cmd = connection.CreateCommand())
         {
-            cmd.CommandText = "SELECT CreatedUtc FROM Post WHERE Id = $id";
+            cmd.CommandText = "SELECT PublishedUtc FROM Post WHERE Id = $id AND Visibility = 'public'";
             cmd.Parameters.AddWithValue("$id", id.ToString("D"));
             created = cmd.ExecuteScalar() as string;
         }
@@ -307,7 +352,7 @@ public class BlogRepository
         PostRef? Find(string comparison, string order)
         {
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"SELECT Id, Title FROM Post WHERE (CreatedUtc, Id) {comparison} ($created, $id) ORDER BY CreatedUtc {order}, Id {order} LIMIT 1";
+            cmd.CommandText = $"SELECT Id, Title FROM Post WHERE Visibility = 'public' AND (PublishedUtc, Id) {comparison} ($created, $id) ORDER BY PublishedUtc {order}, Id {order} LIMIT 1";
             cmd.Parameters.AddWithValue("$created", created);
             cmd.Parameters.AddWithValue("$id", id.ToString("D"));
             using var r = cmd.ExecuteReader();
@@ -319,11 +364,11 @@ public class BlogRepository
 
     private static List<PostRecord> ReadPosts(SqliteConnection connection, string whereSql, IEnumerable<(string Name, object Value)> parameters, string tail)
     {
-        var rows = new List<(Guid Id, string Author, string Title, string Body, bool Spoilers, string Created, string? Updated, int Comments)>();
+        var rows = new List<(Guid Id, string Author, string Title, string Body, bool Spoilers, string Created, string? Updated, int Comments, string Vis, string? Published)>();
         using (var cmd = connection.CreateCommand())
         {
             cmd.CommandText = $@"SELECT p.Id, p.AuthorUserId, p.Title, p.Body, p.HasSpoilers, p.CreatedUtc, p.UpdatedUtc,
-                (SELECT COUNT(*) FROM Comment c WHERE c.PostId = p.Id)
+                (SELECT COUNT(*) FROM Comment c WHERE c.PostId = p.Id), p.Visibility, p.PublishedUtc
                 FROM Post p {whereSql} {tail}";
             foreach (var (name, value) in parameters)
             {
@@ -333,7 +378,7 @@ public class BlogRepository
             using var r = cmd.ExecuteReader();
             while (r.Read())
             {
-                rows.Add((Guid.Parse(r.GetString(0)), r.GetString(1), r.GetString(2), r.GetString(3), r.GetInt32(4) != 0, r.GetString(5), r.IsDBNull(6) ? null : r.GetString(6), r.GetInt32(7)));
+                rows.Add((Guid.Parse(r.GetString(0)), r.GetString(1), r.GetString(2), r.GetString(3), r.GetInt32(4) != 0, r.GetString(5), r.IsDBNull(6) ? null : r.GetString(6), r.GetInt32(7), r.GetString(8), r.IsDBNull(9) ? null : r.GetString(9)));
             }
         }
 
@@ -355,7 +400,9 @@ public class BlogRepository
             x.Updated,
             labels.TryGetValue(x.Id, out var l) ? l : new List<string>(),
             (mentions.TryGetValue(x.Id, out var m) ? m : new List<string>()).Select(Guid.Parse).ToList(),
-            x.Comments)).ToList();
+            x.Comments,
+            x.Vis,
+            x.Published)).ToList();
     }
 
     private static Dictionary<Guid, List<string>> LoadChildren(SqliteConnection connection, IEnumerable<Guid> ids, string sqlTemplate)
@@ -399,7 +446,7 @@ public class BlogRepository
         using (var exists = connection.CreateCommand())
         {
             exists.Transaction = tx;
-            exists.CommandText = "SELECT 1 FROM Post WHERE Id = $post";
+            exists.CommandText = "SELECT 1 FROM Post WHERE Id = $post AND Visibility = 'public'";
             exists.Parameters.AddWithValue("$post", postId.ToString("D"));
             if (exists.ExecuteScalar() is null)
             {
@@ -487,7 +534,7 @@ public class BlogRepository
         using (var connection = Open())
         {
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT substr(CreatedUtc, 1, 7), Id, Title FROM Post ORDER BY CreatedUtc DESC, Id DESC";
+            cmd.CommandText = "SELECT substr(PublishedUtc, 1, 7), Id, Title FROM Post WHERE Visibility = 'public' ORDER BY PublishedUtc DESC, Id DESC";
             using var r = cmd.ExecuteReader();
             while (r.Read())
             {
@@ -516,7 +563,7 @@ public class BlogRepository
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Label, COUNT(*) FROM PostLabel GROUP BY Label ORDER BY Label COLLATE NOCASE ASC, Label ASC";
+        cmd.CommandText = "SELECT l.Label, COUNT(*) FROM PostLabel l JOIN Post p ON p.Id = l.PostId WHERE p.Visibility = 'public' GROUP BY l.Label ORDER BY l.Label COLLATE NOCASE ASC, l.Label ASC";
         var list = new List<LabelCount>();
         using var r = cmd.ExecuteReader();
         while (r.Read())
@@ -532,7 +579,7 @@ public class BlogRepository
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT AuthorUserId, COUNT(*) FROM Post GROUP BY AuthorUserId ORDER BY COUNT(*) DESC, AuthorUserId ASC";
+        cmd.CommandText = "SELECT AuthorUserId, COUNT(*) FROM Post WHERE Visibility = 'public' GROUP BY AuthorUserId ORDER BY COUNT(*) DESC, AuthorUserId ASC";
         var list = new List<AuthorCount>();
         using var r = cmd.ExecuteReader();
         while (r.Read())
@@ -543,12 +590,46 @@ public class BlogRepository
         return list;
     }
 
+    /// <summary>Borradores y privadas del autor, para los contadores de "Mi espacio".</summary>
+    public OwnCounts GetOwnCounts(string authorUserId)
+    {
+        using var connection = Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT Visibility, COUNT(*) FROM Post WHERE AuthorUserId = $a AND Visibility <> 'public' GROUP BY Visibility";
+        cmd.Parameters.AddWithValue("$a", authorUserId);
+        int drafts = 0, priv = 0;
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            if (r.GetString(0) == BlogVisibility.Draft)
+            {
+                drafts = r.GetInt32(1);
+            }
+            else if (r.GetString(0) == BlogVisibility.Private)
+            {
+                priv = r.GetInt32(1);
+            }
+        }
+
+        return new OwnCounts(drafts, priv);
+    }
+
+    /// <summary>Privadas de todos (vista del administrador).</summary>
+    public int CountPrivate()
+    {
+        using var connection = Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM Post WHERE Visibility = 'private'";
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
     public IReadOnlyList<RecentComment> GetRecentComments(int count)
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"SELECT c.PostId, p.Title, c.AuthorUserId, c.Body, c.CreatedUtc
             FROM Comment c JOIN Post p ON p.Id = c.PostId
+            WHERE p.Visibility = 'public'
             ORDER BY c.CreatedUtc DESC, c.rowid DESC LIMIT $n";
         cmd.Parameters.AddWithValue("$n", count);
         var list = new List<RecentComment>();

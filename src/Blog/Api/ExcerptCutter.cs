@@ -1,11 +1,15 @@
 using System;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Jellyfin.Plugin.Blog.Api;
 
 /// <summary>Recorte de textos por límite de palabra. Puro, sin dependencias de Jellyfin.</summary>
 public static class ExcerptCutter
 {
+    // Menciones @[Titulo](id) y enlaces [texto](url): un corte nunca debe partirlos por la mitad.
+    private static readonly Regex Atomic = new(@"@?\[[^\]\n]{0,200}\]\([^)\s]{1,300}\)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     /// <summary>
     /// Devuelve el texto tal cual si cabe en <paramref name="maxLength"/>; si no, lo corta en el
     /// último espacio en blanco antes del límite (o duro en el límite si no hay ninguno).
@@ -48,6 +52,16 @@ public static class ExcerptCutter
             if (char.IsHighSurrogate(text[cut - 1]))
             {
                 cut--;
+            }
+        }
+
+        // Si el corte cae dentro de una mencion o un enlace, retrocede hasta antes de ella.
+        foreach (Match m in Atomic.Matches(text))
+        {
+            if (m.Index < cut && m.Index + m.Length > cut)
+            {
+                cut = m.Index;
+                break;
             }
         }
 

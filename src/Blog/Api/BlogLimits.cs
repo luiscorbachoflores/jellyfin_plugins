@@ -11,7 +11,7 @@ public static class BlogLimits
     public const int CommentBodyMax = 4000;
     public const int MaxLabels = 5;
     public const int LabelMax = 30;
-    public const int MaxMentions = 10;
+    public const int MaxMentions = 20;
     public const int ExcerptLength = 1500;
     public const int RecentCommentExcerptLength = 120;
     public const int RecentCommentCount = 5;

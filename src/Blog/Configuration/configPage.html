@@ -29,12 +29,28 @@
                         </label>
                         <div class="fieldDescription checkboxFieldDescription">Añade el enlace a <code>menuLinks</code> de <code>/web/config.json</code>, conservando los enlaces que ya tuvieras. Los clientes web lo recogen al recargar la página.</div>
                     </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="BlogAllowedUsers">Usuarios con acceso</label>
-                        <select is="emby-select" id="BlogAllowedUsers" multiple style="height:8em;"></select>
-                        <div class="fieldDescription">Sin seleccionar ninguno, el blog es visible para cualquier usuario con sesión (por defecto). Si seleccionas usuarios, solo ellos (y los administradores) podrán leerlo y publicar en él. Mantén pulsado Ctrl/Cmd para seleccionar varios.</div>
+                    <div class="verticalSection blogAccess">
+                        <h3 class="sectionTitle">Quién puede usar el blog</h3>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input is="emby-checkbox" type="checkbox" id="BlogRestrict" />
+                                <span>Limitar el blog a usuarios concretos</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription" id="BlogRestrictHint"></div>
+                        </div>
+                        <div id="BlogAccessBox" style="display:none;">
+                            <div class="fieldDescription" style="margin:.2em 0 .8em;">Solo los usuarios de esta lista (y los administradores, que siempre pasan) podrán leer el blog y publicar en él.</div>
+                            <div id="BlogAllowedList" style="margin-bottom:1em;"></div>
+                            <div style="display:flex;gap:.6em;align-items:flex-end;flex-wrap:wrap;">
+                                <div class="selectContainer" style="flex:1 1 14em;margin:0;">
+                                    <label class="selectLabel" for="BlogAddUser">Añadir usuario</label>
+                                    <select is="emby-select" id="BlogAddUser"></select>
+                                </div>
+                                <button is="emby-button" type="button" class="raised" id="BlogAddUserBtn"><span>Añadir a la lista</span></button>
+                            </div>
+                        </div>
                     </div>
-                    <div>
+                    <div style="margin-top:1.5em;">
                         <button is="emby-button" type="submit" class="raised button-submit block">
                             <span>Guardar</span>
                         </button>
@@ -51,35 +67,92 @@
                         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
                 }
 
+                // Ids sin guiones y en minúsculas para compararlos sin errores de formato.
+                var norm = function (id) { return String(id || "").replace(/-/g, "").toLowerCase(); };
+                var users = [];
+                var allowed = [];
+
+                function find(id) {
+                    return users.filter(function (x) { return norm(x.Id) === norm(id); })[0];
+                }
+                function nameOf(id) {
+                    var u = find(id);
+                    return u ? u.Name : "Usuario desconocido (" + id + ")";
+                }
+                function isAdmin(id) {
+                    var u = find(id);
+                    return !!(u && u.Policy && u.Policy.IsAdministrator);
+                }
+
+                function draw() {
+                    var restrict = document.querySelector("#BlogRestrict").checked;
+                    document.querySelector("#BlogAccessBox").style.display = restrict ? "" : "none";
+                    document.querySelector("#BlogRestrictHint").textContent = restrict
+                        ? "Activado: el blog solo lo ven los usuarios de la lista."
+                        : "Desactivado: el blog lo ve cualquier usuario con sesión iniciada.";
+
+                    var list = document.querySelector("#BlogAllowedList");
+                    if (!allowed.length) {
+                        list.innerHTML = "<div class=\"fieldDescription\" style=\"padding:.6em 0;\">La lista está vacía: ahora mismo solo entrarían los administradores. Añade usuarios con el selector de abajo.</div>";
+                    } else {
+                        list.innerHTML = allowed.map(function (id) {
+                            return "<div style=\"display:flex;align-items:center;gap:.8em;padding:.45em .2em;border-bottom:1px solid rgba(128,128,128,.25);\">" +
+                                "<span style=\"flex:1;\">" + escapeHtml(nameOf(id)) + (isAdmin(id) ? " <span class=\"fieldDescription\" style=\"display:inline;\">(administrador)</span>" : "") + "</span>" +
+                                "<button is=\"emby-button\" type=\"button\" class=\"raised blogRemove\" data-id=\"" + escapeHtml(id) + "\" style=\"margin:0;\"><span>Quitar</span></button></div>";
+                        }).join("");
+                    }
+
+                    var sel = document.querySelector("#BlogAddUser");
+                    var free = users.filter(function (u) { return !allowed.some(function (a) { return norm(a) === norm(u.Id); }); });
+                    sel.innerHTML = free.length
+                        ? free.map(function (u) { return "<option value=\"" + u.Id + "\">" + escapeHtml(u.Name) + "</option>"; }).join("")
+                        : "<option value=\"\">Todos los usuarios ya están en la lista</option>";
+                    document.querySelector("#BlogAddUserBtn").disabled = !free.length;
+                }
+
+                document.querySelector("#BlogAllowedList").addEventListener("click", function (e) {
+                    var b = e.target.closest ? e.target.closest(".blogRemove") : null;
+                    if (!b) { return; }
+                    var id = b.getAttribute("data-id");
+                    allowed = allowed.filter(function (a) { return norm(a) !== norm(id); });
+                    draw();
+                });
+                document.querySelector("#BlogAddUserBtn").addEventListener("click", function () {
+                    var id = document.querySelector("#BlogAddUser").value;
+                    if (id && !allowed.some(function (a) { return norm(a) === norm(id); })) { allowed.push(id); }
+                    draw();
+                });
+                document.querySelector("#BlogRestrict").addEventListener("change", draw);
+
                 document.querySelector("#BlogConfigPage").addEventListener("pageshow", function () {
                     Dashboard.showLoadingMsg();
-                    var usersSelect = document.querySelector("#BlogAllowedUsers");
                     Promise.all([ApiClient.getPluginConfiguration(pluginId), ApiClient.getUsers()]).then(function (results) {
                         var config = results[0];
-                        var users = results[1] || [];
-                        usersSelect.innerHTML = users.map(function (u) {
-                            return "<option value=\"" + u.Id + "\">" + escapeHtml(u.Name) + "</option>";
-                        }).join("");
+                        users = results[1] || [];
                         document.querySelector("#BlogTitle").value = config.Title || "";
                         document.querySelector("#BlogDescription").value = config.Description || "";
                         document.querySelector("#BlogShowInMenu").checked = config.ShowInMenu !== false;
-                        var allowed = config.AllowedUserIds || [];
-                        Array.prototype.forEach.call(usersSelect.options, function (o) {
-                            o.selected = allowed.indexOf(o.value) !== -1;
-                        });
+                        allowed = (config.AllowedUserIds || []).slice();
+                        document.querySelector("#BlogRestrict").checked = allowed.length > 0;
+                        draw();
                         Dashboard.hideLoadingMsg();
                     });
                 });
 
                 document.querySelector("#BlogConfigForm").addEventListener("submit", function (e) {
                     e.preventDefault();
+                    var restrict = document.querySelector("#BlogRestrict").checked;
+                    // Con la limitación activa y la lista vacía el servidor abriría el blog a todos: se avisa en vez de guardar algo engañoso.
+                    if (restrict && !allowed.length) {
+                        Dashboard.alert("Has activado la limitación pero la lista está vacía. Añade al menos un usuario o desactiva la limitación.");
+                        return false;
+                    }
                     Dashboard.showLoadingMsg();
-                    var usersSelect = document.querySelector("#BlogAllowedUsers");
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.Title = document.querySelector("#BlogTitle").value.trim();
                         config.Description = document.querySelector("#BlogDescription").value.trim();
                         config.ShowInMenu = document.querySelector("#BlogShowInMenu").checked;
-                        config.AllowedUserIds = Array.prototype.filter.call(usersSelect.options, function (o) { return o.selected; }).map(function (o) { return o.value; });
+                        config.AllowedUserIds = restrict ? allowed.slice() : [];
                         ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });

@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Jellyfin.Plugin.Blog.Api;
 
-public record ValidatedPost(string Title, string Body, IReadOnlyList<string> Labels, IReadOnlyList<Guid> MentionItemIds, bool HasSpoilers);
+public record ValidatedPost(string Title, string Body, IReadOnlyList<string> Labels, IReadOnlyList<Guid> MentionItemIds, bool HasSpoilers, string Visibility = BlogVisibility.Public);
 
 /// <summary>
 /// Validación y normalización de entradas, comentarios, etiquetas y filtros. Todo puro y sin tipos
@@ -24,12 +24,23 @@ public static class BlogValidation
         IEnumerable<string?>? mentionItemIds,
         bool hasSpoilers,
         out ValidatedPost post,
-        out string? error)
+        out string? error,
+        string? visibility = null)
     {
         post = new ValidatedPost(string.Empty, string.Empty, Array.Empty<string>(), Array.Empty<Guid>(), hasSpoilers);
 
+        var vis = BlogVisibility.Normalize(visibility);
+        if (vis is null)
+        {
+            error = "Estado de la entrada no válido.";
+            return false;
+        }
+
+        // Un borrador puede estar a medias (título o texto vacíos, pero no los dos).
+        var isDraft = vis == BlogVisibility.Draft;
         var t = (title ?? string.Empty).Trim();
-        if (t.Length < 1 || t.Length > BlogLimits.TitleMax)
+        var minTitle = isDraft ? 0 : 1;
+        if (t.Length < minTitle || t.Length > BlogLimits.TitleMax)
         {
             error = $"El título debe tener entre 1 y {BlogLimits.TitleMax} caracteres.";
             return false;
@@ -42,9 +53,11 @@ public static class BlogValidation
         }
 
         var b = NormalizeBody(body);
-        if (b.Length < 1 || b.Length > BlogLimits.PostBodyMax)
+        if (b.Length > BlogLimits.PostBodyMax || (!isDraft && b.Length < 1) || (isDraft && t.Length == 0 && b.Length == 0))
         {
-            error = "El texto de la entrada debe tener entre 1 y 20.000 caracteres.";
+            error = isDraft
+                ? "El borrador necesita al menos un título o algo de texto (máximo 20.000 caracteres)."
+                : "El texto de la entrada debe tener entre 1 y 20.000 caracteres.";
             return false;
         }
 
@@ -58,7 +71,7 @@ public static class BlogValidation
             return false;
         }
 
-        post = new ValidatedPost(t, b, normalizedLabels, mentions, hasSpoilers);
+        post = new ValidatedPost(t, b, normalizedLabels, mentions, hasSpoilers, vis);
         error = null;
         return true;
     }

@@ -104,11 +104,11 @@ public class BlogValidationTests
     }
 
     [Fact]
-    public void Mentions_UpToTen_DuplicatesCollapsed()
+    public void Mentions_UpToMax_DuplicatesCollapsed()
     {
-        var ten = Enumerable.Range(1, 10).Select(i => new Guid(i, 0, 0, new byte[8]).ToString()).ToArray();
+        var ten = Enumerable.Range(1, BlogLimits.MaxMentions).Select(i => new Guid(i, 0, 0, new byte[8]).ToString()).ToArray();
         Assert.True(Post("t", "b", null, ten, out var post, out _));
-        Assert.Equal(10, post.MentionItemIds.Count);
+        Assert.Equal(BlogLimits.MaxMentions, post.MentionItemIds.Count);
 
         var eleven = ten.Append(new Guid(99, 0, 0, new byte[8]).ToString()).ToArray();
         Assert.False(Post("t", "b", null, eleven, out _, out _));

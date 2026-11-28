@@ -31,6 +31,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = Name,
+                DisplayName = "Blog",
+                EnableInMainMenu = true,
+                MenuSection = "server",
+                MenuIcon = "forum",
                 EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace),
             },
         };

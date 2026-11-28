@@ -81,7 +81,8 @@ public class BlogController : ControllerBase
         [FromQuery] string? archive,
         [FromQuery] string? author,
         [FromQuery] string? item,
-        [FromQuery] string? q)
+        [FromQuery] string? q,
+        [FromQuery] string? view)
     {
         var (auth, denied) = await Authenticate().ConfigureAwait(false);
         if (denied is not null || auth is null)
@@ -131,8 +132,35 @@ public class BlogController : ControllerBase
             text = text.Substring(0, BlogLimits.SearchTextMax);
         }
 
-        var result = _repository.QueryPosts(new PostQuery(label, archive, authorId, itemId, text), pageNumber);
         var viewer = Viewer.From(auth);
+
+        // view=drafts / private: lo propio. view=hidden: todas las privadas (solo administrador).
+        var visibility = BlogVisibility.Public;
+        switch ((view ?? string.Empty).Trim().ToLowerInvariant())
+        {
+            case "":
+                break;
+            case "drafts":
+                visibility = BlogVisibility.Draft;
+                authorId = viewer.UserId;
+                break;
+            case "private":
+                visibility = BlogVisibility.Private;
+                authorId = viewer.UserId;
+                break;
+            case "hidden":
+                if (!viewer.IsAdmin)
+                {
+                    return new StatusCodeResult(StatusCodes.Status403Forbidden);
+                }
+
+                visibility = BlogVisibility.Private;
+                break;
+            default:
+                return BadRequest("Vista no válida.");
+        }
+
+        var result = _repository.QueryPosts(new PostQuery(label, archive, authorId, itemId, text, visibility), pageNumber);
         var names = new NameCache(_userManager);
         var posts = result.Posts.Select(p => ToSummary(p, viewer, names, auth.User)).ToList();
         return Ok(new PostListDto(posts, result.Page, result.HasNewer, result.HasOlder));
@@ -148,12 +176,13 @@ public class BlogController : ControllerBase
         }
 
         var post = _repository.GetPost(id);
-        if (post is null)
+        var viewer = Viewer.From(auth);
+        if (post is null || !CanView(post, viewer))
         {
             return NotFound();
         }
 
-        return Ok(ToDetail(post, Viewer.From(auth), new NameCache(_userManager), auth.User));
+        return Ok(ToDetail(post, viewer, new NameCache(_userManager), auth.User));
     }
 
     [HttpPost("Posts")]
@@ -196,9 +225,22 @@ public class BlogController : ControllerBase
             return forbidden;
         }
 
+        // Un cliente que no envia el estado (JS antiguo en cache, scripts) nunca debe publicar por
+        // accidente un borrador o una privada: sin Visibility se conserva la actual.
+        if (dto is not null && string.IsNullOrWhiteSpace(dto.Visibility))
+        {
+            dto.Visibility = existing.Visibility;
+        }
+
         if (!TryValidatePost(dto, auth.User, out var validated, out var error))
         {
             return BadRequest(error);
+        }
+
+        // Publicada = irreversible: nunca vuelve a privada ni a borrador.
+        if (!BlogVisibility.CanTransition(existing.Visibility, validated.Visibility))
+        {
+            return Conflict(BlogVisibility.CannotRevertMessage);
         }
 
         var updated = _repository.UpdatePost(id, validated);
@@ -316,6 +358,12 @@ public class BlogController : ControllerBase
             return denied!;
         }
 
+        var owner = _repository.GetPost(id);
+        if (owner is null || !CanView(owner, Viewer.From(auth)))
+        {
+            return NotFound();
+        }
+
         var found = BlogImageStore.FindImage(_appPaths.PluginsPath, id);
         if (found is null)
         {
@@ -335,9 +383,15 @@ public class BlogController : ControllerBase
             return denied!;
         }
 
-        if (_repository.GetPost(id) is null)
+        var target = _repository.GetPost(id);
+        if (target is null || !CanView(target, Viewer.From(auth)))
         {
             return NotFound();
+        }
+
+        if (target.Visibility != BlogVisibility.Public)
+        {
+            return Conflict("Solo se puede comentar en entradas públicas.");
         }
 
         if (!BlogValidation.TryValidateComment(dto?.Body, out var body, out var error))
@@ -446,10 +500,46 @@ public class BlogController : ControllerBase
                 c.CreatedUtc))
             .ToList();
 
-        return Ok(new SidebarDto(archive, labels, authors, recent));
+        var own = _repository.GetOwnCounts(auth.UserId.ToString("D"));
+        int? hidden = IsAdmin(auth.User) ? _repository.CountPrivate() : null;
+        return Ok(new SidebarDto(archive, labels, authors, recent, own.Drafts, own.Private, hidden));
+    }
+
+    /// <summary>Entradas públicas que mencionan un título. Lo usa el plugin de reseñas para avisar en la ficha.</summary>
+    [HttpGet("Mentions/{itemId}")]
+    public async Task<ActionResult<MentionedInDto>> GetMentions([FromRoute] string itemId)
+    {
+        var (auth, denied) = await Authenticate().ConfigureAwait(false);
+        if (denied is not null || auth is null)
+        {
+            return denied!;
+        }
+
+        if (!Guid.TryParse(itemId, out var itemGuid))
+        {
+            return BadRequest("Título no válido.");
+        }
+
+        var libraryItem = _libraryManager.GetItemById(itemGuid);
+        if (libraryItem is null || !libraryItem.IsVisibleStandalone(auth.User))
+        {
+            return Ok(new MentionedInDto(0, Array.Empty<MentionPostDto>()));
+        }
+
+        var page = _repository.QueryPosts(new PostQuery(ItemId: itemGuid), 1);
+        var names = new NameCache(_userManager);
+        var posts = page.Posts
+            .Select(p => new MentionPostDto(p.Id.ToString("D"), p.Title, names.Resolve(p.AuthorUserId), p.PublishedUtc ?? p.CreatedUtc))
+            .ToList();
+        return Ok(new MentionedInDto(posts.Count + (page.HasOlder ? 1 : 0), posts));
     }
 
     // ------------------------------------------------------------------ helpers
+
+    private static bool CanView(PostRecord post, Viewer viewer)
+    {
+        return BlogVisibility.CanView(post.Visibility, BlogAccessPolicy.SameUser(viewer.UserId, post.AuthorUserId), viewer.IsAdmin);
+    }
 
     private async Task<(AuthorizationInfo? Auth, ActionResult? Denied)> Authenticate()
     {
@@ -480,7 +570,7 @@ public class BlogController : ControllerBase
             return false;
         }
 
-        if (!BlogValidation.TryValidatePost(dto.Title, dto.Body, dto.Labels, dto.MentionItemIds, dto.HasSpoilers, out validated, out error))
+        if (!BlogValidation.TryValidatePost(dto.Title, dto.Body, dto.Labels, dto.MentionItemIds, dto.HasSpoilers, out validated, out error, dto.Visibility))
         {
             return false;
         }
@@ -542,7 +632,9 @@ public class BlogController : ControllerBase
             p.CommentCount,
             BlogAccessPolicy.CanEdit(viewer.UserId, p.AuthorUserId),
             BlogAccessPolicy.CanDelete(viewer.UserId, p.AuthorUserId, viewer.IsAdmin),
-            BlogImageStore.HasImage(_appPaths.PluginsPath, p.Id));
+            BlogImageStore.HasImage(_appPaths.PluginsPath, p.Id),
+            p.Visibility,
+            p.PublishedUtc);
     }
 
     private PostDetailDto ToDetail(PostRecord p, Viewer viewer, NameCache names, User? user)
@@ -565,7 +657,9 @@ public class BlogController : ControllerBase
             BlogImageStore.HasImage(_appPaths.PluginsPath, p.Id),
             comments,
             newer is null ? null : new PostRefDto(newer.Id.ToString("D"), newer.Title),
-            older is null ? null : new PostRefDto(older.Id.ToString("D"), older.Title));
+            older is null ? null : new PostRefDto(older.Id.ToString("D"), older.Title),
+            p.Visibility,
+            p.PublishedUtc);
     }
 
     private static CommentDto ToCommentDto(CommentRecord c, Viewer viewer, NameCache names)

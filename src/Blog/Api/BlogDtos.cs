@@ -24,7 +24,9 @@ public record PostSummaryDto(
     int CommentCount,
     bool CanEdit,
     bool CanDelete,
-    bool HasImage);
+    bool HasImage,
+    string Visibility = "public",
+    string? PublishedUtc = null);
 
 public record PostListDto(IReadOnlyList<PostSummaryDto> Posts, int Page, bool HasNewer, bool HasOlder);
 
@@ -48,7 +50,9 @@ public record PostDetailDto(
     bool HasImage,
     IReadOnlyList<CommentDto> Comments,
     PostRefDto? Newer,
-    PostRefDto? Older);
+    PostRefDto? Older,
+    string Visibility = "public",
+    string? PublishedUtc = null);
 
 public record ArchiveMonthDto(int Month, int Count, IReadOnlyList<PostRefDto> Posts);
 
@@ -64,7 +68,14 @@ public record SidebarDto(
     IReadOnlyList<ArchiveYearDto> Archive,
     IReadOnlyList<LabelCountDto> Labels,
     IReadOnlyList<AuthorCountDto> Authors,
-    IReadOnlyList<RecentCommentDto> RecentComments);
+    IReadOnlyList<RecentCommentDto> RecentComments,
+    int OwnDrafts = 0,
+    int OwnPrivate = 0,
+    int? HiddenPrivate = null);
+
+public record MentionPostDto(string Id, string Title, string AuthorName, string PublishedUtc);
+
+public record MentionedInDto(int Total, IReadOnlyList<MentionPostDto> Posts);
 
 /// <summary>Cuerpo de POST/PUT /Blog/Posts. Los ids de títulos llegan como texto y se validan a mano.</summary>
 public class PostInputDto
@@ -78,6 +89,9 @@ public class PostInputDto
     public List<string?>? MentionItemIds { get; set; }
 
     public bool HasSpoilers { get; set; }
+
+    /// <summary>"public" (por defecto), "private" o "draft".</summary>
+    public string? Visibility { get; set; }
 }
 
 public class CommentInputDto
