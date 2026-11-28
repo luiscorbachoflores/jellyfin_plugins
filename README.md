@@ -82,16 +82,36 @@ Código en [`src/WeeklyPick`](src/WeeklyPick).
 
 ![Blog de cine](docs/img/plugins/blog-banner.png)
 
-Blog de cine compartido, al estilo de los blogs clasicos de Blogspot: cualquier usuario con sesion lee y publica entradas (texto plano, etiquetas, titulos de la biblioteca mencionados, marca de spoilers) y comenta. Pantalla propia en #/blog con columna lateral (buscador, archivo por ano y mes, etiquetas, colaboradores y comentarios recientes). El autor edita y borra lo suyo; un admin puede borrar (no editar) contenido ajeno.
+Blog de cine compartido, al estilo de los blogs clasicos de Blogspot: cualquier usuario con sesion lee y publica entradas (texto, etiquetas, marca de spoilers) y comenta. Pantalla propia en #/blog con columna lateral (buscador, archivo por ano y mes, etiquetas, colaboradores y comentarios recientes). El autor edita y borra lo suyo; un admin puede borrar (no editar) contenido ajeno.
 
-- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller 12.2.0). Store propio en SQLite (<plugins>/Blog.Data/blog.db).
+Desde la 1.1: cada usuario tiene sus **borradores** (autoguardado, solo los ve el autor), puede publicar **en privado** (solo el autor y el administrador, que las ve en una pestana aparte) y, una vez publicada en publico, la entrada ya no puede volver a privada. Se **mencionan peliculas** escribiendo @ (autocompletado con la biblioteca) y al final de la entrada salen sus caratulas como acceso rapido, en el orden que elige el autor. Una imagen de portada por entrada, reducida en el navegador y guardada como fichero (no en la base de datos). La configuracion trae una lista de usuarios con acceso mas clara y el plugin aparece en el menu del panel.
+
+- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller 12.2.0). Store propio en SQLite (<plugins>/Blog.Data/blog.db); las bases anteriores se migran solas.
 - La pantalla se pinta dentro de la ruta comodin de jellyfin-web (#fallbackPage), con su cabecera y tema; todo el texto de usuarios se inserta como texto, nunca como HTML.
-- Entrada Blog en el menu lateral de los dos layouts mediante menuLinks de /web/config.json (un middleware la anade sin tocar los enlaces del admin). Se puede desactivar en la configuracion del plugin (ShowInMenu), junto con el titulo y la descripcion del blog.
-- API (/Blog): Info, Posts, Posts/{id}, Posts/{id}/Comments, Comments/{id}, Sidebar; 401 sin sesion.
+- Entrada Blog en el menu lateral mediante menuLinks de /web/config.json (un middleware la anade sin tocar los enlaces del admin). Se puede desactivar en la configuracion del plugin (ShowInMenu).
+- API (/Blog): Info, Posts (vistas drafts, private, hidden para admin), Posts/{id}, Posts/{id}/Comments, Comments/{id}, Sidebar, Mentions/{itemId}; 401 sin sesion, 404 si la entrada no es visible para quien pregunta, 409 al intentar volver privada una entrada publica.
+- Si esta instalado Reviews 1.6 o superior, la ficha de una pelicula muestra «Mencionada en el blog» con las entradas publicas que la citan.
 - Diagnostico: localStorage['blog.debug'] = '1'.
-- Tests: dotnet test tests/Jellyfin.Plugin.Blog.Tests y node tests/blog-js/smoke.js (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
+- Tests: dotnet test tests/Jellyfin.Plugin.Blog.Tests y node tests/blog-js/e2e.js (Playwright contra una instancia de pruebas real).
 
 Codigo en [`src/Blog`](src/Blog).
+
+## Diary (Diario de cine)
+
+![Diario](docs/img/plugins/diary-banner.png)
+
+Diario privado de cine por usuario en #/diary, con «Mi diario» en el menu del usuario junto a «Mi lista». Cada pelicula que se termina de ver se apunta sola con su fecha («vista aqui»), igual que las que se marcan como vistas a mano («marcada a mano»); reproducir a medias no cuenta y desmarcar «visto» lo deshace. Cada persona puede cambiar la fecha, puntuar en medias estrellas, escribir un comentario, anadir peliculas que vio fuera y borrar entradas. Un boton trae lo que Jellyfin ya tenia como visto (Jellyfin solo guarda la ultima fecha de cada pelicula, no cada visionado).
+
+**Tu ano en la Titoteca** (#/diary/year/AAAA): resumen del ano con peliculas y horas, mosaico de caratulas, mes y dia de la semana grandes, generos, epocas, notas, rachas, primera y ultima pelicula y lo mas visto de la Titoteca (a partir de tres personas).
+
+- Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller 12.2.0). Store propio en SQLite (<plugins>/Diary.Data/diary.db). Solo usa APIs publicas: el evento IUserDataManager.UserDataSaved y la API HTTP del plugin.
+- Privacidad: cada usuario solo ve y modifica su diario (404 si la entrada es de otro). El administrador solo ve cuantas entradas tiene cada usuario en la pagina de configuracion.
+- API (/Diary): Entries (GET, POST, PUT y DELETE por id), Year/{ano}, Import, Admin/ImportAll y Admin/Summary; 401 sin sesion.
+- Configuracion: horas en las que dos registros de la misma pelicula cuentan como un visionado (12 por defecto) y boton para importar el historial de todos los usuarios.
+- Las fechas automaticas usan la zona horaria del servidor.
+- Tests: dotnet test tests/Jellyfin.Plugin.Diary.Tests y node tests/blog-js/diary-e2e.js.
+
+Codigo en [`src/Diary`](src/Diary).
 
 ## AdminMessages
 
@@ -112,14 +132,14 @@ Codigo en [`src/AdminMessages`](src/AdminMessages).
 
 ![Mi lista](docs/img/plugins/watchlist-banner.png)
 
-Lista personal "para ver" por usuario (distinta de Favoritos). Se anade/quita desde el menu de tres puntos de cualquier caratula o ficha (icono more_vert, cubre rejilla y detalle con el mismo selector), y "Mi lista" en el menu del usuario (junto a Perfil/Ajustes) abre la lista. Solo cliente web.
+Lista personal "para ver" por usuario (distinta de Favoritos). Se anade/quita desde el menu de tres puntos de cualquier caratula o ficha (icono more_vert, cubre rejilla y detalle con el mismo selector), y "Mi lista" en el menu del usuario (junto a Perfil/Ajustes) abre la lista, que desde la 1.1 es una pantalla propia (#/watchlist) y no una ventana emergente. Solo cliente web.
 
 - Para **Jellyfin 12.2** (.NET 10, Jellyfin.Controller 12.2.0). Store propio en SQLite (<plugins>/Watchlist.Data/watchlist.db), maximo 500 titulos por usuario; cada usuario solo ve y modifica la suya (ni un admin ve la de otros).
 - API: GET /Watchlist, GET|POST|DELETE /Watchlist/Items/{itemId}; 401 sin sesion, 404 si el usuario no puede ver el item, 400 si no es pelicula/serie o se supera el limite.
-- La vista "Mi lista" es un panel centrado al 70% de la pantalla (94vw/88vh en movil), con fondo atenuado y tres formas de cerrar: boton X, Escape o click fuera del panel. Probado con 28 titulos sin desbordar ni romper el grid.
-- **Acceso de emergencia:** si una version futura de jellyfin-web rompe los anclajes de menu, abre #/home?watchlist=open (parametro watchlist=open en el hash) y la lista se abre al cargar.
+- La pantalla #/watchlist muestra las caratulas en rejilla con ano, duracion y cuanto hace que se anadieron, filtro por peliculas y series, cuatro ordenes y un boton «Sorprendeme» que abre un titulo al azar de la lista.
+- **Acceso de emergencia:** si una version futura de jellyfin-web rompe los anclajes de menu, abre #/home?watchlist=open (parametro watchlist=open en el hash) y se abre la pantalla de la lista.
 - Diagnostico: localStorage['watchlist.debug'] = '1' muestra en consola que estrategia de anclaje encajo ([Watchlist] menu: modern-app-user-menu).
-- Tests: dotnet test tests/Jellyfin.Plugin.Watchlist.Tests y node tests/watchlist-js/smoke.js (Playwright contra fixtures HTML escritos a mano; no prueban el DOM real de jellyfin-web).
+- Tests: node tests/blog-js/diary-e2e.js tambien recorre esta pantalla contra una instancia de pruebas real.
 
 Codigo en [`src/Watchlist`](src/Watchlist).
 
@@ -135,6 +155,10 @@ dotnet build -c Release -o build
 Para Language Badges y Search Notifier hay un script que genera los zips e `meta.json`: `scripts/build-new-plugins.sh [versionJellyfin] [dirPlugins]` (por defecto 10.11.8; p. ej. `12.1.0` para Jellyfin 12, con `targetAbi` acorde). Tests en [`tests/`](tests) (`setup_and_test.py`, `webhook_test.py`, `ui_screenshots.py`, `search_demo.py`).
 
 El resultado en `build/` incluye el DLL del plugin y sus dependencias. Para desplegar manualmente, copia el contenido a `config/plugins/<Nombre>_<version>/` de tu instancia de Jellyfin.
+
+Para empaquetar una tanda para Jellyfin 12.2 (zips en dist/ y entradas nuevas en manifest.json y manifest-staging.json) esta `scripts/release.py`: `python3 scripts/release.py Blog Diary Watchlist`. No sube nada; las releases de GitHub se crean despues con los zips.
+
+Para comprobar pronto si una version nueva de Jellyfin rompe un plugin, compila contra ella: `dotnet build src/Diary -c Release -p:JellyfinVersion=12.4.0` (los plugins para 12.x aceptan ese parametro). Compilan contra 12.3.0 y 12.4.0.
 
 ## Compatibilidad
 
