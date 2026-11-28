@@ -1,3 +1,4 @@
+// Requiere un blog sin entradas de otros usuarios (parte de listados vacios): ejecutarlo en una instancia de pruebas limpia.
 'use strict';
 // Prueba de extremo a extremo del Blog contra la instancia de pruebas (admin/admin y tito/tito).
 // Cubre: borradores, privadas (ocultas al resto, visibles al admin), irreversibilidad de lo publicado,
